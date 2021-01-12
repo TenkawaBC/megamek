@@ -18,9 +18,12 @@ package megamek.server;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -80,10 +83,11 @@ import megamek.common.options.OptionsConstants;
 import megamek.common.util.BoardUtilities;
 import megamek.common.util.StringUtil;
 import megamek.common.util.fileUtils.MegaMekFile;
+import megamek.common.BoardIndex;
 
 public class ScenarioLoader {
     private static final String COMMENT_MARK = "#";
-    
+
     private static final String SEPARATOR_PROPERTY = "=";
     private static final String SEPARATOR_COMMA = ",";
     private static final String SEPARATOR_SPACE = " ";
@@ -135,7 +139,7 @@ public class ScenarioLoader {
     public ScenarioLoader(File f) {
         scenarioFile = f;
     }
-    
+
     // TODO: legal/valid ammo type handling and game options, since they are set at this point
     private AmmoType getValidAmmoType(IGame game, Mounted mounted, String ammoString) {
         final Entity e = mounted.getEntity();
@@ -152,8 +156,8 @@ public class ScenarioLoader {
             return null;
         } else if (!newAmmoType.isLegal(year, SimpleTechLevel.getGameTechLevel(game), e.isClan(), e.isMixedTech())) {
             MegaMek.getLogger().warning(String.format("Ammo %s (TL %d) is not legal for year %d (TL %d)",
-                    newAmmoType.getName(), newAmmoType.getTechLevel(year), year,
-                    TechConstants.getGameTechLevel(game, e.isClan())));
+                                                      newAmmoType.getName(), newAmmoType.getTechLevel(year), year,
+                                                      TechConstants.getGameTechLevel(game, e.isClan())));
             return null;
         } else if (e.isClan() && !game.getOptions().booleanOption(OptionsConstants.ALLOWED_CLAN_IGNORE_EQ_LIMITS)) {
             // Check for clan weapon restrictions
@@ -170,18 +174,18 @@ public class ScenarioLoader {
         }
 
         if (AmmoType.canDeliverMinefield((AmmoType) newAmmoType)
-                && !game.getOptions().booleanOption(OptionsConstants.ADVANCED_MINEFIELDS)) {
+            && !game.getOptions().booleanOption(OptionsConstants.ADVANCED_MINEFIELDS)) {
             MegaMek.getLogger().warning(String.format("Minefield-creating ammo type %s forbidden by game rules",
-                    newAmmoType.getName()));
+                                                      newAmmoType.getName()));
             return null;
         }
 
         int weaponAmmoType = (currentWeaponType instanceof WeaponType) ? ((WeaponType) currentWeaponType).getAmmoType() : 0;
         if ((((AmmoType) newAmmoType).getRackSize() == ((AmmoType) currentAmmoType).getRackSize())
-                && (newAmmoType.hasFlag(AmmoType.F_BATTLEARMOR) == currentAmmoType.hasFlag(AmmoType.F_BATTLEARMOR))
-                && (newAmmoType.hasFlag(AmmoType.F_ENCUMBERING) == currentAmmoType.hasFlag(AmmoType.F_ENCUMBERING))
-                && (newAmmoType.getTonnage(e) == currentAmmoType.getTonnage(e))
-                && (((AmmoType) newAmmoType).getAmmoType() == weaponAmmoType)) {
+            && (newAmmoType.hasFlag(AmmoType.F_BATTLEARMOR) == currentAmmoType.hasFlag(AmmoType.F_BATTLEARMOR))
+            && (newAmmoType.hasFlag(AmmoType.F_ENCUMBERING) == currentAmmoType.hasFlag(AmmoType.F_ENCUMBERING))
+            && (newAmmoType.getTonnage(e) == currentAmmoType.getTonnage(e))
+            && (((AmmoType) newAmmoType).getAmmoType() == weaponAmmoType)) {
             return (AmmoType) newAmmoType;
         } else {
             return null;
@@ -213,10 +217,10 @@ public class ScenarioLoader {
                         if (damagePlan.entity.getOInternal(specDamage.loc) > specDamage.setArmorTo) {
                             damagePlan.entity.setInternal(specDamage.setArmorTo, specDamage.loc);
                             MegaMek.getLogger().debug(String.format("\tSet armor value for (internal %s) to %d",
-                                    damagePlan.entity.getLocationName(specDamage.loc), specDamage.setArmorTo));
+                                                                    damagePlan.entity.getLocationName(specDamage.loc), specDamage.setArmorTo));
                             if (specDamage.setArmorTo == 0) {
                                 MegaMek.getLogger().debug(String.format("\tSection destoyed %s",
-                                        damagePlan.entity.getLocationName(specDamage.loc)));
+                                                                        damagePlan.entity.getLocationName(specDamage.loc)));
                                 damagePlan.entity.destroyLocation(specDamage.loc);
                             }
                         }
@@ -224,13 +228,13 @@ public class ScenarioLoader {
                         if (specDamage.rear && damagePlan.entity.hasRearArmor(specDamage.loc)) {
                             if (damagePlan.entity.getOArmor(specDamage.loc, true) > specDamage.setArmorTo) {
                                 MegaMek.getLogger().debug(String.format("\tSet armor value for (rear %s) to %d",
-                                        damagePlan.entity.getLocationName(specDamage.loc), specDamage.setArmorTo));
+                                                                        damagePlan.entity.getLocationName(specDamage.loc), specDamage.setArmorTo));
                                 damagePlan.entity.setArmor(specDamage.setArmorTo, specDamage.loc, true);
                             }
                         } else {
                             if (damagePlan.entity.getOArmor(specDamage.loc, false) > specDamage.setArmorTo) {
                                 MegaMek.getLogger().debug(String.format("\tSet armor value for (%s) to %d",
-                                        damagePlan.entity.getLocationName(specDamage.loc), specDamage.setArmorTo));
+                                                                        damagePlan.entity.getLocationName(specDamage.loc), specDamage.setArmorTo));
 
                                 // Battle Armor Handled Differently
                                 // If armor set to Zero kill the Armor sport
@@ -267,15 +271,15 @@ public class ScenarioLoader {
                         // Is this a torso weapon slot?
                         CriticalSlot cs = null;
                         if ((chp.entity instanceof Protomech)
-                                && (Protomech.LOC_TORSO == critHit.loc)
-                                && ((Protomech.SYSTEM_TORSO_WEAPON_A == critHit.slot) || (Protomech.SYSTEM_TORSO_WEAPON_B == critHit.slot))) {
+                            && (Protomech.LOC_TORSO == critHit.loc)
+                            && ((Protomech.SYSTEM_TORSO_WEAPON_A == critHit.slot) || (Protomech.SYSTEM_TORSO_WEAPON_B == critHit.slot))) {
                             cs = new CriticalSlot(CriticalSlot.TYPE_SYSTEM, critHit.slot);
                         }
                         // Is this a valid slot number?
                         else if ((critHit.slot < 0)
-                                || (critHit.slot > chp.entity.getNumberOfCriticals(critHit.loc))) {
+                                 || (critHit.slot > chp.entity.getNumberOfCriticals(critHit.loc))) {
                             MegaMek.getLogger().error(String.format("%s - invalid slot specified %d: %d",
-                                    chp.entity.getShortName(), critHit.loc, (critHit.slot + 1)));
+                                                                    chp.entity.getShortName(), critHit.loc, (critHit.slot + 1)));
                         }
                         // Get the slot from the entity.
                         else {
@@ -285,7 +289,7 @@ public class ScenarioLoader {
                         // Ignore invalid, unhittable, and damaged slots.
                         if ((null == cs) || !cs.isHittable()) {
                             MegaMek.getLogger().error(String.format("%s - slot not hittable %d: %d",
-                                    chp.entity.getShortName(), critHit.loc, (critHit.slot + 1)));
+                                                                    chp.entity.getShortName(), critHit.loc, (critHit.slot + 1)));
                         } else {
                             MegaMek.getLogger().debug("[s.applyCriticalHit(chp.entity, ch.loc, cs, false)]");
                             s.applyCriticalHit(chp.entity, critHit.loc, cs, false, 0, false);
@@ -295,7 +299,7 @@ public class ScenarioLoader {
                     else if (chp.entity instanceof Tank) {
                         if ((critHit.slot < 0) || (critHit.slot >= 6)) {
                             MegaMek.getLogger().error(String.format("%s - invalid slot specified %d: %d",
-                                    chp.entity.getShortName(), critHit.loc, (critHit.slot + 1)));
+                                                                    chp.entity.getShortName(), critHit.loc, (critHit.slot + 1)));
                         } else {
                             CriticalSlot cs = new CriticalSlot(CriticalSlot.TYPE_SYSTEM, critHit.slot + 1);
                             MegaMek.getLogger().debug("[s.applyCriticalHit(chp.entity, ch.loc, cs, false)]");
@@ -318,14 +322,14 @@ public class ScenarioLoader {
                             Mounted ammo = sap.entity.getCritical(sa.loc, sa.slot).getMount();
                             if (ammo == null) {
                                 MegaMek.getLogger().error(String.format("%s - invalid slot specified %d: %d",
-                                        sap.entity.getShortName(), sa.loc, sa.slot + 1));
+                                                                        sap.entity.getShortName(), sa.loc, sa.slot + 1));
                             } else if (ammo.getType() instanceof AmmoType) {
                                 AmmoType newAmmoType = getValidAmmoType(s.getGame(), ammo, sa.type);
                                 if (newAmmoType != null) {
                                     ammo.changeAmmoType(newAmmoType);
                                 } else {
                                     MegaMek.getLogger().warning(String.format("Illegal ammo type '%s' for unit %s, slot %s",
-                                            sa.type, sap.entity.getDisplayName(), ammo.getName()));
+                                                                              sa.type, sap.entity.getDisplayName(), ammo.getName()));
                                 }
                             }
                         }
@@ -344,7 +348,7 @@ public class ScenarioLoader {
                             Mounted ammo = sap.entity.getCritical(sa.loc, sa.slot).getMount();
                             if (ammo == null) {
                                 MegaMek.getLogger().error(String.format("%s - invalid slot specified %d: %d",
-                                        sap.entity.getShortName(), sa.loc, sa.slot + 1));
+                                                                        sap.entity.getShortName(), sa.loc, sa.slot + 1));
                             } else if (ammo.getType() instanceof AmmoType) {
                                 // Also make sure we dont exceed the max allowed
                                 ammo.setShotsLeft(Math.min(sa.setAmmoTo, ammo.getBaseShotsLeft()));
@@ -421,19 +425,19 @@ public class ScenarioLoader {
         Pattern unitDataPattern = Pattern.compile(String.format("^(Unit_\\Q%s\\E_[^_]+)_([A-Z][^_]+)$", faction));
 
         Map<String, Entity> entities = new HashMap<>();
-        
+
         // Gather all defined units
         for (String key : p.keySet()) {
             if (unitPattern.matcher(key).matches() && (p.getNumValues(key) > 0)) {
                 if (p.getNumValues(key) > 1) {
                     MegaMek.getLogger().error(String.format("Scenario loading: Unit declaration %s found %d times",
-                            key, p.getNumValues(key)));
+                                                            key, p.getNumValues(key)));
                     throw new ScenarioLoaderException("multipleUnitDeclarations", key);
                 }
                 entities.put(key, parseEntityLine(p.getString(key)));
             }
         }
-        
+
         // Add other information
         for (String key: p.keySet()) {
             Matcher dataMatcher = unitDataPattern.matcher(key);
@@ -498,7 +502,7 @@ public class ScenarioLoader {
                         int round = Integer.parseInt(p.getString(key));
                         if (round > 0) {
                             MegaMek.getLogger().debug(String.format("%s will be deployed before round %d",
-                                e.getDisplayName(), round));
+                                                                    e.getDisplayName(), round));
                             e.setDeployRound(round);
                             e.setDeployed(false);
                             e.setNeverDeployed(false);
@@ -517,7 +521,7 @@ public class ScenarioLoader {
                             }
                         } else {
                             MegaMek.getLogger().warning(String.format("Altitude setting for a non-aerospace unit %s; ignoring",
-                                    e.getShortName()));
+                                                                      e.getShortName()));
                         }
                         break;
                     default:
@@ -525,7 +529,7 @@ public class ScenarioLoader {
                 }
             }
         }
-        
+
         return entities.values();
     }
 
@@ -547,13 +551,13 @@ public class ScenarioLoader {
             // direction calculation below.
             if ((parts.length > 4) && parts[4].matches("-?\\d+")) {
                 e.setCrew(new Crew(e.getCrew().getCrewType(), parts[1], 1,
-                        Integer.parseInt(parts[2]), Integer.parseInt(parts[3]),
-                        Gender.parseFromString(parts[4]), null));
+                                   Integer.parseInt(parts[2]), Integer.parseInt(parts[3]),
+                                   Gender.parseFromString(parts[4]), null));
                 i = 5; // direction will be part 5, as the scenario has the gender of its pilots included
             } else {
                 e.setCrew(new Crew(e.getCrew().getCrewType(), parts[1], 1,
-                        Integer.parseInt(parts[2]), Integer.parseInt(parts[3]),
-                        RandomGenderGenerator.generate(), null));
+                                   Integer.parseInt(parts[2]), Integer.parseInt(parts[3]),
+                                   RandomGenderGenerator.generate(), null));
                 i = 4; // direction will be part 4, as the scenario does not contain gender
             }
 
@@ -604,7 +608,7 @@ public class ScenarioLoader {
                 MegaMek.getLogger().error(String.format("Ignoring invalid pilot advantage '%s'", curAdv));
             } else {
                 MegaMek.getLogger().debug(String.format("Adding pilot advantage '%s' to %s",
-                        curAdv, entity.getDisplayName()));
+                                                        curAdv, entity.getDisplayName()));
                 if (advantageData.length > 1) {
                     option.setValue(advantageData[1]);
                 } else {
@@ -638,7 +642,7 @@ public class ScenarioLoader {
                 camoGroup += "/"; //$NON-NLS-1$
             }
         }
-        
+
         boolean validGroup = false;
 
         if (Camouflage.NO_CAMOUFLAGE.equals(camoGroup) || AbstractIcon.ROOT_CATEGORY.equals(camoGroup)) {
@@ -655,7 +659,7 @@ public class ScenarioLoader {
 
         return validGroup ? camoGroup : null;
     }
-    
+
     private String getValidCamoName(String camoGroup, String camoName) {
         boolean validName = false;
 
@@ -676,10 +680,10 @@ public class ScenarioLoader {
                 }
             }
         }
-        
+
         return validName ? camoName : null;
     }
-    
+
     /*
      * Camo Parser/Validator for Individual Entity Camo
      */
@@ -688,12 +692,12 @@ public class ScenarioLoader {
         String camoGroup = getValidCamoGroup(camoData[0]);
         if (camoGroup == null) {
             throw new ScenarioLoaderException("invalidIndividualCamoGroup",
-                camoData[0], entity.getDisplayName());
+                                              camoData[0], entity.getDisplayName());
         }
         String camoName = getValidCamoName(camoGroup, camoData[1]);
         if (camoName == null) {
             throw new ScenarioLoaderException("invalidIndividualCamoName",
-                camoData[1], camoGroup, entity.getDisplayName());
+                                              camoData[1], camoGroup, entity.getDisplayName());
         }
 
         entity.setCamoCategory(camoGroup);
@@ -708,12 +712,12 @@ public class ScenarioLoader {
         String camoGroup = getValidCamoGroup(camoData[0]);
         if (camoGroup == null) {
             throw new ScenarioLoaderException("invalidFactionCamoGroup",
-                camoData[0], player.getName());
+                                              camoData[0], player.getName());
         }
         String camoName = getValidCamoName(camoGroup, camoData[1]);
         if (camoName == null) {
             throw new ScenarioLoaderException("invalidFactionCamoName",
-                camoData[1], camoGroup, player.getName());
+                                              camoData[1], camoGroup, player.getName());
         }
 
         player.setCamoCategory(camoGroup);
@@ -732,7 +736,7 @@ public class ScenarioLoader {
     private String getFactionParam(String faction, String param) {
         return param + SEPARATOR_UNDERSCORE + faction;
     }
-    
+
     private Collection<Player> createPlayers(StringMultiMap p) throws ScenarioLoaderException {
         String sFactions = p.getString(PARAM_FACTIONS);
         if ((sFactions == null) || sFactions.isEmpty()) {
@@ -750,19 +754,19 @@ public class ScenarioLoader {
 
             // scenario players start out as ghosts to be logged into
             player.setGhost(true);
-            
+
             String loc = p.getString(getFactionParam(faction, PARAM_LOCATION));
             if (loc == null) {
                 loc = "Any";
             }
             int dir = Math.max(findIndex(IStartingPositions.START_LOCATION_NAMES, loc), 0);
             player.setStartingPos(dir);
-            
+
             String camo = p.getString(getFactionParam(faction, PARAM_CAMO));
             if ((camo != null) && !camo.isEmpty()) {
                 parseCamo(player, camo);
             }
-            
+
             String team = p.getString(getFactionParam(faction, PARAM_TEAM));
             if ((team != null) && !team.isEmpty()) {
                 try {
@@ -774,7 +778,7 @@ public class ScenarioLoader {
                 teamId++;
             }
             player.setTeam(Math.min(teamId, IPlayer.MAX_TEAMS - 1));
-            
+
             String minefields = p.getString(getFactionParam(faction, PARAM_MINEFIELDS));
             if ((minefields != null) && !minefields.isEmpty()) {
                 String[] mines = minefields.split(SEPARATOR_COMMA, -1);
@@ -788,12 +792,12 @@ public class ScenarioLoader {
                         player.setNbrMFVibra(minesVibra);
                     } catch (NumberFormatException nfex) {
                         MegaMek.getLogger().error(String.format("Format error with minefields string '%s' for %s",
-                                minefields, faction));
+                                                                minefields, faction));
                     }
                 }
             }
         }
-        
+
         return result;
     }
 
@@ -803,13 +807,13 @@ public class ScenarioLoader {
     private IBoard createBoard(StringMultiMap p) throws ScenarioLoaderException {
         int mapWidth = 16, mapHeight = 17;
         if (p.getString(PARAM_MAP_WIDTH) == null) {
-            MegaMek.getLogger().info("No map width specified; using " + mapWidth);
+            MegaMek.getLogger().info("No map width specified; using " + mapWidth + "for random");
         } else {
             mapWidth = Integer.parseInt(p.getString(PARAM_MAP_WIDTH));
         }
 
         if (p.getString(PARAM_MAP_HEIGHT) == null) {
-            MegaMek.getLogger().info("No map height specified; using " + mapHeight);
+            MegaMek.getLogger().info("No map height specified; using " + mapHeight + "for random");
         } else {
             mapHeight = Integer.parseInt(p.getString(PARAM_MAP_HEIGHT));
         }
@@ -836,34 +840,15 @@ public class ScenarioLoader {
             cf = Integer.parseInt(p.getString(PARAM_BRIDGE_CF));
             MegaMek.getLogger().debug("Overriding map-defined bridge CFs with " + cf);
         }
-        // load available boards
-        // basically copied from Server.java. Should get moved somewhere neutral
-        List<String> boards = new ArrayList<>();
 
-        // Find subdirectories given in the scenario file
-        List<String> allDirs = new LinkedList<>();
-        // "" entry stands for the boards base directory 
-        allDirs.add("");
+        // Create an index listing of the boards available
+        BoardIndex boards = new BoardIndex(p.getString(PARAM_MAP_DIRECTORIES));
 
-        if (p.getString(PARAM_MAP_DIRECTORIES) != null) {
-            allDirs = Arrays.asList(p.getString(PARAM_MAP_DIRECTORIES)
-                    .split(SEPARATOR_COMMA, -1));
-        }
-
-        for (String dir: allDirs) {
-            File curDir = new File(Configuration.boardsDir(), dir);
-            if (curDir.exists()) {
-                for (String file : curDir.list()) {
-                    if (file.toLowerCase(Locale.ROOT).endsWith(FILE_SUFFIX_BOARD)) {
-                        boards.add(dir+"/"+file.substring(0, file.length() - FILE_SUFFIX_BOARD.length()));
-                    }
-                }
-            }
-        }
+        Queue<String> maps = new LinkedList<>(
+                Arrays.asList(p.getString(PARAM_MAPS).split(SEPARATOR_COMMA, -1)));
 
         IBoard[] ba = new IBoard[nWidth * nHeight];
-        Queue<String> maps = new LinkedList<>(
-            Arrays.asList(p.getString(PARAM_MAPS).split(SEPARATOR_COMMA, -1)));
+
         List<Boolean> rotateBoard = new ArrayList<>();
         for (int x = 0; x < nWidth; x++) {
             for (int y = 0; y < nHeight; y++) {
@@ -880,11 +865,16 @@ public class ScenarioLoader {
                     board = board.substring(Board.BOARD_REQUEST_ROTATION.length());
                 }
 
-                String sBoardFile;
+                String sBoardFile ="";
+
                 if (board.equals(MAP_RANDOM)) {
-                    sBoardFile = (boards.get(Compute.randomInt(boards.size()))) + FILE_SUFFIX_BOARD;
+
+                    sBoardFile = boards.getRandom(mapWidth, mapHeight);
+                    MegaMek.getLogger().info("Got map: " + sBoardFile);
+
                 } else {
                     sBoardFile = board + FILE_SUFFIX_BOARD;
+                    MegaMek.getLogger().info("Loading board " +sBoardFile);
                 }
                 File fBoard = new MegaMekFile(Configuration.boardsDir(), sBoardFile).getFile();
                 if (!fBoard.exists()) {
@@ -904,8 +894,19 @@ public class ScenarioLoader {
         if (ba.length == 1) {
             return ba[0];
         }
+
+        int checkWidth = ba[0].getWidth();
+        int checkHeight = ba[0].getHeight();
+
+        for (int i = 1; i < ba.length; i++) {
+            if (!((checkWidth == ba[i].getHeight()) && (checkHeight == ba[i].getHeight()))){
+                MegaMek.getLogger().info("Map sizes do not match. Returning first map only");
+                return ba[0];
+            }
+        }
+
         // construct the big board
-        return BoardUtilities.combine(mapWidth, mapHeight, nWidth, nHeight, ba, rotateBoard, MapSettings.MEDIUM_GROUND);
+        return BoardUtilities.combine(checkWidth, checkHeight, nWidth, nHeight, ba, rotateBoard, MapSettings.MEDIUM_GROUND);
     }
 
     private StringMultiMap load() throws ScenarioLoaderException {
@@ -920,13 +921,13 @@ public class ScenarioLoader {
                     continue;
                 } else if (!line.contains(SEPARATOR_PROPERTY)) {
                     MegaMek.getLogger().error(String.format("Equality sign in scenario file %s on line %d missing; ignoring",
-                            scenarioFile, lineNum));
+                                                            scenarioFile, lineNum));
                     continue;
                 }
                 String[] elements = line.split(SEPARATOR_PROPERTY, -1);
                 if (elements.length > 2) {
                     MegaMek.getLogger().error(String.format("Multiple equality signs in scenario file %s on line %d; ignoring",
-                            scenarioFile, lineNum));
+                                                            scenarioFile, lineNum));
                     continue;
                 }
                 props.put(elements[0].trim(), elements[1].trim());
@@ -987,7 +988,7 @@ public class ScenarioLoader {
             int ewSpot = s.indexOf(':');
             int loc = Integer.parseInt(s.substring(0, ewSpot));
             int slot = Integer.parseInt(s.substring(ewSpot + 1));
-            
+
             critHits.add(new CritHit(loc, slot - 1));
         }
     }
@@ -1006,12 +1007,12 @@ public class ScenarioLoader {
             this.setAmmoTo = setAmmoTo;
         }
     }
-    
+
     private static class SetAmmoType {
         public final int loc;
         public final int slot;
         public final String type;
-        
+
         public SetAmmoType(int loc, int slot, String type) {
             this.loc = loc;
             this.slot = slot;
@@ -1047,7 +1048,7 @@ public class ScenarioLoader {
 
             ammoSetTo.add(new SetAmmoTo(loc, slot - 1, setTo));
         }
-        
+
         public void addSetAmmoType(String s) {
             int ewSpot = s.indexOf(':');
             int atSpot = s.indexOf('-');
@@ -1056,7 +1057,7 @@ public class ScenarioLoader {
             }
             int loc = Integer.parseInt(s.substring(0, ewSpot));
             int slot = Integer.parseInt(s.substring(ewSpot + 1, atSpot));
-            
+
             ammoSetType.add(new SetAmmoType(loc, slot - 1, s.substring(atSpot + 1)));
         }
     }
@@ -1109,26 +1110,26 @@ public class ScenarioLoader {
             int setTo = Integer.parseInt(s.substring(ewSpot + 1));
             boolean rear = (s.charAt(0) == 'R');
             boolean internal = (s.charAt(0) == 'I');
-            
+
             specificDammage.add(new SpecDam(loc, setTo, rear, internal));
         }
     }
-    
+
     private static class ScenarioLoaderException extends Exception {
         private static final long serialVersionUID = 8622648319531348199L;
-        
+
         private final Object[] params;
 
         public ScenarioLoaderException(String errorKey) {
             super(errorKey);
             this.params = null;
         }
-        
+
         public ScenarioLoaderException(String errorKey, Object... params) {
             super(errorKey);
             this.params = params;
         }
-        
+
         @Override
         public String getMessage() {
             String result = Messages.getString("ScenarioLoaderException." + super.getMessage());
@@ -1142,7 +1143,7 @@ public class ScenarioLoader {
             return result;
         }
     }
-    
+
     private static class StringMultiMap extends HashMap<String, Collection<String>> {
         private static final long serialVersionUID = 2171662843329151622L;
 
@@ -1164,7 +1165,7 @@ public class ScenarioLoader {
             if ((values == null) || (values.size() == 0)) {
                 return null;
             }
-            
+
             boolean firstElement = true;
             StringBuilder sb = new StringBuilder();
             for (String val : values) {
@@ -1177,7 +1178,7 @@ public class ScenarioLoader {
             }
             return sb.toString();
         }
-        
+
         /** @return the number of values for this key in the file */
         public int getNumValues(String key) {
             Collection<String> values = get(key);
