@@ -538,6 +538,9 @@ public class OptionsConstants {
 
     public static final String PLAYTEST_1 = "playtest_1";
     public static final String PLAYTEST_2 = "playtest_2";
+    public static final String PLAYTEST_3 = "playtest_3";
+    public static final String PLAYTEST_4 = "playtest_4";
+    public static final String PLAYTEST_5 = "playtest_5";
 
     private OptionsConstants() {
     }

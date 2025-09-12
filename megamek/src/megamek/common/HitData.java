@@ -145,7 +145,7 @@ public class HitData {
     public void makeArmorPiercing(AmmoType inType, int modifier, boolean playtest) {
         specCrit = true;
         
-        // PLAYTEST2 AP changes to -2 and -1 respectively
+        // PLAYTEST3 AP changes to -2 and -1 respectively
         if (playtest) {
             if (inType.getRackSize() == 2) {
                 specCritMod = -2;

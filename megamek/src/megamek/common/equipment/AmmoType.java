@@ -3484,9 +3484,9 @@ public class AmmoType extends EquipmentType {
         AmmoType.createMunitions(clanImprovedLRMsAmmo, munitions);
 
         // Create the munition types for AC rounds.
-        // PLAYTEST2 ammo types, need to figure how to get the options
+        // PLAYTEST3 ammo types, need to figure how to get the options
         munitions.clear();
-        /*if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_2) {
+        /*if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_3) {
             munitions.add(ARMOR_PIERCING_MUNITION_MUTATOR_PLAYTEST);
         } else {*/
             munitions.add(ARMOR_PIERCING_MUNITION_MUTATOR);
@@ -3494,7 +3494,7 @@ public class AmmoType extends EquipmentType {
         munitions.add(CASELESS_MUNITION_MUTATOR);
         munitions.add(FLAK_MUNITION_MUTATOR);
         munitions.add(FLECHETTE_MUNITION_MUTATOR);
-        //if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_2) {
+        //if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_3) {
         //    munitions.add(PRECISION_MUNITION_MUTATOR_PLAYTEST);
         //} else{
             munitions.add(PRECISION_MUNITION_MUTATOR);
@@ -3505,7 +3505,7 @@ public class AmmoType extends EquipmentType {
         // Create the munition types for Clan Improved AC rounds. Since Improved AC go
         // extinct the ammo will as well.
         munitions.clear();
-        //if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_2) {
+        //if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_3) {
            // munitions.add(CLAN_IMPROVED_ARMOR_PIERCING_MUNITION_MUTATOR_PLAYTEST);
         //} else {
             munitions.add(CLAN_IMPROVED_ARMOR_PIERCING_MUNITION_MUTATOR);

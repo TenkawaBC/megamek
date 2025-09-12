@@ -72,7 +72,7 @@ public class FlamerHandler extends WeaponHandler {
           int nCluster, int bldgAbsorbs) {
         boolean bmmFlamerDamage = game.getOptions().booleanOption(OptionsConstants.BASE_FLAMER_HEAT);
         Entity entity = game.getEntity(weaponAttackAction.getEntityId());
-        boolean playtestFlamers = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2);
+        boolean playtestFlamers = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3);
         if (entity == null) {
             return;
         }

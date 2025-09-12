@@ -816,7 +816,7 @@ public class ComputeToHit {
 
         // Armor Piercing ammo is a flat +1
         // PLAYTEST2 no longer +1 for AP ammo
-        boolean playtestTwo = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2);
+        boolean playtestTwo = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3);
         if (!playtestTwo) {
             if (((ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.AC) ||
                   (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.LAC) ||

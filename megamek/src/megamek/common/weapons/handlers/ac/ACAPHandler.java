@@ -144,7 +144,7 @@ public class ACAPHandler extends ACWeaponHandler {
             if (bDirect) {
                 critModifier += toHit.getMoS() / 3;
             }
-            boolean playtest = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2);
+            boolean playtest = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3);
             hit.makeArmorPiercing(ammoType, critModifier, playtest);
             vPhaseReport.addAll(gameManager.damageEntity(entityTarget, hit, nDamage, false,
                   attackingEntity.getSwarmTargetId() == entityTarget.getId() ? DamageType.IGNORE_PASSENGER : damageType,
