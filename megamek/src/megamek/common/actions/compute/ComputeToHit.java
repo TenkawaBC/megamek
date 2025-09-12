@@ -72,6 +72,7 @@ import megamek.common.weapons.capitalWeapons.CapitalMissileWeapon;
 import megamek.common.weapons.lasers.VariableSpeedPulseLaserWeapon;
 import megamek.common.weapons.lasers.innerSphere.ISBombastLaser;
 import megamek.common.weapons.lrms.LRTWeapon;
+import megamek.common.weapons.missiles.MRMWeapon;
 import megamek.common.weapons.srms.SRTWeapon;
 import megamek.logging.MMLogger;
 
@@ -1456,9 +1457,15 @@ public class ComputeToHit {
                     modifier += RangeType.RANGE_LONG;
                 }
             }
-            toHit.addModifier(modifier, Messages.getString("WeaponAttackAction.WeaponMod"));
+            if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3) && weaponType instanceof MRMWeapon) {
+                modifier--;
+            }     
+            if (modifier != 0) {
+                toHit.addModifier(modifier, Messages.getString("WeaponAttackAction.WeaponMod"));
+            }
+          
         }
-
+        
         // Indirect fire (LRMs, mortars and the like) has a +1 mod
         if (isIndirect) {
             toHit.addModifier(1, Messages.getString("WeaponAttackAction.Indirect"));

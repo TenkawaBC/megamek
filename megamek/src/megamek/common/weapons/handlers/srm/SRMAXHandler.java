@@ -54,8 +54,8 @@ public class SRMAXHandler extends SRMHandler {
     public SRMAXHandler(ToHitData t, WeaponAttackAction w, Game g, TWGameManager m) throws EntityLoadingException {
         super(t, w, g, m);
         sSalvoType = " acid-head missile(s) ";
-        // PLAYTEST2 reduced to -1 from -2
-        nSalvoBonus = -1;
+        // PLAYTEST3 TODO reduced to -1 from -2
+        nSalvoBonus = -2;
         damageType = DamageType.ACID;
         generalDamageType = HitData.DAMAGE_AX;
     }

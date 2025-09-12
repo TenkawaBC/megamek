@@ -7554,7 +7554,7 @@ public abstract class Entity extends TurnOrdered
         int gyroDamage = getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO, Mek.LOC_CENTER_TORSO);
         if (getGyroType() == Mek.GYRO_HEAVY_DUTY) {
             // PLAYTEST2 no problem with running now
-            if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+            if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
                 gyroDamage = 0; // HD gyro run checks
             } else {
                 gyroDamage--;
@@ -13106,7 +13106,7 @@ public abstract class Entity extends TurnOrdered
             int totalForceBV = 0;
             boolean playtestThree = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3);
             double multiplier = 0.05;
-            // PLAYTEST C3 BV Changes. flat 0.3 multiplier other than boosted
+            // PLAYTEST3 C3 BV Changes. flat 0.3 multiplier other than boosted
             if (playtestThree) {
                 multiplier = 0.3;
             } 
@@ -13569,10 +13569,10 @@ public abstract class Entity extends TurnOrdered
 
                 } else {
                     // do the damage. random critical slot on each leg, but MASC is not destroyed
-                    // PLAYTEST2 MASC is now much less lethal
+                    // PLAYTEST3 MASC is now much less lethal
                     int locationCount=0;
                     int[] locationCheck = new int[4];
-                    if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+                    if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
                         for (int loc = 0; loc < locations(); loc++) {
                             if (locationIsLeg(loc) && (getHittableCriticalSlots(loc) > 0)) {
                                 locationCheck[locationCount] = loc;

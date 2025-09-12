@@ -2169,18 +2169,17 @@ public abstract class Mek extends Entity {
 
             if (side == ToHitData.SIDE_FRONT) {
                 // front punch hits
-                // PLAYTEST flip order (no real change)
                 switch (roll) {
                     case 1:
-                        return new HitData(Mek.LOC_RIGHT_ARM);
+                        return new HitData(Mek.LOC_LEFT_ARM);
                     case 2:
-                        return new HitData(Mek.LOC_RIGHT_TORSO);
+                        return new HitData(Mek.LOC_LEFT_TORSO);
                     case 3:
                         return new HitData(Mek.LOC_CENTER_TORSO);
                     case 4:
-                        return new HitData(Mek.LOC_LEFT_TORSO);
+                        return new HitData(Mek.LOC_RIGHT_TORSO);
                     case 5:
-                        return new HitData(Mek.LOC_LEFT_ARM);
+                        return new HitData(Mek.LOC_RIGHT_ARM);
                     case 6:
                         if (shouldUseEdge(OptionsConstants.EDGE_WHEN_HEAD_HIT)) {
                             getCrew().decreaseEdge();
@@ -2194,16 +2193,13 @@ public abstract class Mek extends Entity {
             }
             if (side == ToHitData.SIDE_LEFT) {
                 // left side punch hits
-                // PLAYTEST left side
                 switch (roll) {
                     case 1:
-                        return new HitData(Mek.LOC_LEFT_ARM);
                     case 2:
                         return new HitData(Mek.LOC_LEFT_TORSO);
                     case 3:
                         return new HitData(Mek.LOC_CENTER_TORSO);
                     case 4:
-                        return new HitData(Mek.LOC_LEFT_TORSO);
                     case 5:
                         return new HitData(Mek.LOC_LEFT_ARM);
                     case 6:
@@ -2219,16 +2215,13 @@ public abstract class Mek extends Entity {
             }
             if (side == ToHitData.SIDE_RIGHT) {
                 // right side punch hits
-                // PLAYTEST all right
                 switch (roll) {
                     case 1:
-                        return new HitData(Mek.LOC_RIGHT_ARM);
                     case 2:
                         return new HitData(Mek.LOC_RIGHT_TORSO);
                     case 3:
                         return new HitData(Mek.LOC_CENTER_TORSO);
                     case 4:
-                        return new HitData(Mek.LOC_RIGHT_TORSO);
                     case 5:
                         return new HitData(Mek.LOC_RIGHT_ARM);
                     case 6:
@@ -3363,8 +3356,8 @@ public abstract class Mek extends Entity {
         if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
               Mek.LOC_CENTER_TORSO) > 0) {
 
-            // PLAYTEST2 HD Gyro changes and PSR changes
-            if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+            // PLAYTEST3 HD Gyro changes and PSR changes
+            if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
                 if (getGyroType() == Mek.GYRO_HEAVY_DUTY) {
                     if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
                           Mek.LOC_CENTER_TORSO) == 1) {
@@ -3378,7 +3371,11 @@ public abstract class Mek extends Entity {
                     }
                 } else {
                     // PLAYTEST2 gyro only a 2 modifier now
-                    roll.addModifier(2, "Gyro damaged");
+                    if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+                        roll.addModifier(2, "Gyro damaged");
+                    } else {
+                        roll.addModifier(3, "Gyro damaged");
+                    }
                 }
             } else {
                 if (getGyroType() == Mek.GYRO_HEAVY_DUTY) {
@@ -3389,7 +3386,11 @@ public abstract class Mek extends Entity {
                         roll.addModifier(3, "HD Gyro damaged twice");
                     }
                 } else {
-                    roll.addModifier(3, "Gyro damaged");
+                    if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+                        roll.addModifier(2, "Gyro damaged");
+                    } else {
+                        roll.addModifier(3, "Gyro damaged");
+                    }
                 }
             }
         }
@@ -6004,8 +6005,14 @@ public abstract class Mek extends Entity {
         // Gyro destroyed? TW p. 258 at least heavily implies that that counts
         // as being immobilized as well, which makes sense because the 'Mek
         // certainly isn't leaving that hex under its own power anymore.
-        // PLAYTEST new HD Gyro changes
-        int hitsToDestroyGyro = (gyroType == GYRO_HEAVY_DUTY) ? 4 : 2;
+        // PLAYTEST3 new HD Gyro changes
+        int hitsToDestroyGyro = 2;
+        if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+            if (gyroType == GYRO_HEAVY_DUTY) {hitsToDestroyGyro = 4;}
+        } else {
+            if (gyroType == GYRO_HEAVY_DUTY) {hitsToDestroyGyro = 3;}
+        }
+        
         return getGyroHits() >= hitsToDestroyGyro;
     }
 

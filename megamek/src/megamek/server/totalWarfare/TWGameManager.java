@@ -10027,24 +10027,29 @@ public class TWGameManager extends AbstractGameManager {
                 continue;
             }
 
-            // PLAYTEST2 Allow AMS to target 2 attacks.
             WeaponAttackAction targetedWAA = null;
+            // PLAYTEST3 Allow AMS to target 2 attacks.
+            boolean playtestAMS = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3);
+            // Only used for playtest
             WeaponAttackAction secondWAA = null;
 
             if (ams.curMode().equals("Automatic")) {
                 targetedWAA = Compute.getHighestExpectedDamage(game, vAttacksInArc, true);
                 // If there is more than one attack, lets find it
-                if (vAttacksInArc.size()>1) {
-                    int countWaa = 0;
-                    for (WeaponAttackAction waa : vAttacksInArc) {
-                        // Remove the existing targeted attack once found
-                        if (waa == targetedWAA) {
-                            vAttacksInArc.remove(countWaa);
+                if (playtestAMS) {
+                    if (vAttacksInArc.size() > 1) {
+                        int countWaa = 0;
+                        for (WeaponAttackAction waa : vAttacksInArc) {
+                            // Remove the existing targeted attack once found
+                            if (waa == targetedWAA) {
+                                vAttacksInArc.remove(countWaa);
+                            }
+                            countWaa++;
                         }
-                        countWaa++;
+                        // Get the highest expected damage of the remaining attacks
+                        secondWAA = Compute.getHighestExpectedDamage(game, vAttacksInArc, true);
+                        
                     }
-                    // Get the highest expected damage of the remaining attacks
-                    secondWAA = Compute.getHighestExpectedDamage(game, vAttacksInArc, true);
                 }
             } else {
                 // Send a client feedback request
@@ -10077,7 +10082,7 @@ public class TWGameManager extends AbstractGameManager {
                 amsTargets.add(targetedWAA);
             }
             // If we have a second attack, lets do this.
-            if (secondWAA != null) {
+            if (secondWAA != null && playtestAMS) {
                 secondWAA.addCounterEquipment(ams);
                 amsTargets.add(secondWAA);
             }
@@ -12950,16 +12955,16 @@ public class TWGameManager extends AbstractGameManager {
             r.subject = ae.getId();
             r.add(toHit.getDesc());
             addReport(r);
-            // PLAYTEST no more PSR for missed mace attacks.
-            /*
-            if (caa.getClub().getType().hasSubType(MiscType.S_MACE)) {
-                if (ae instanceof LandAirMek && ae.isAirborneVTOLorWIGE()) {
-                    game.addControlRoll(new PilotingRollData(ae.getId(), 0, "missed a mace attack"));
-                } else {
-                    game.addPSR(new PilotingRollData(ae.getId(), 0, "missed a mace attack"));
-                }
-            } */
-
+            // PLAYTEST3 no more PSR for missed mace attacks.
+            if (!game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+                if (caa.getClub().getType().hasSubType(MiscType.S_MACE)) {
+                    if (ae instanceof LandAirMek && ae.isAirborneVTOLorWIGE()) {
+                        game.addControlRoll(new PilotingRollData(ae.getId(), 0, "missed a mace attack"));
+                    } else {
+                        game.addPSR(new PilotingRollData(ae.getId(), 0, "missed a mace attack"));
+                    }
+                } 
+            }
             if (caa.isZweihandering()) {
                 if (caa.getClub().getType().hasSubType(MiscType.S_CLUB)) {
                     applyZweihanderSelfDamage(ae, true, Mek.LOC_RIGHT_ARM, Mek.LOC_LEFT_ARM);
@@ -21658,15 +21663,17 @@ public class TWGameManager extends AbstractGameManager {
                     target -= 2;
                 }
                 // Impact-resistant armor easier to breach
-                // PLAYTEST no longer easier
-                /* if ((entity.getArmorType(loc) == EquipmentType.T_ARMOR_IMPACT_RESISTANT)) {
-                    r = new Report(6344);
-                    r.subject = entity.getId();
-                    r.indent(3);
-                    vDesc.addElement(r);
-                    target += 1;
-                }    
-                 */
+                // PLAYTEST3 no longer easier
+                if (!game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+                     if ((entity.getArmorType(loc) == EquipmentType.T_ARMOR_IMPACT_RESISTANT)) {
+                        r = new Report(6344);
+                        r.subject = entity.getId();
+                        r.indent(3);
+                        vDesc.addElement(r);
+                        target += 1;
+                    }    
+                }
+                 
                 Roll diceRoll = Compute.rollD6(2);
                 breachRoll = diceRoll.getIntValue();
                 r = new Report(6345);
@@ -22835,7 +22842,7 @@ public class TWGameManager extends AbstractGameManager {
         // calculate damage for hitting the ground, but only if we actually fell
         // into water
         // if we fell onto the water surface, that damage is halved.
-        // PLAYTEST TODO Water fall damage
+        // PLAYTEST5 TODO Water fall damage
         int waterDamage = 0;
         if (waterDepth > 0) {
             damage /= 2;
@@ -22891,8 +22898,12 @@ public class TWGameManager extends AbstractGameManager {
         entity.setElevation(newElevation);
         // Only 'meks change facing when they fall
         if (entity instanceof Mek) {
-            // PLAYTEST Always fall on the front
-            entity.setFacing(entity.getFacing());
+            // PLAYTEST5 Always fall on the front
+            if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_5)) {
+                entity.setFacing(entity.getFacing());
+            } else {
+                entity.setFacing((entity.getFacing() + (facing)) % 6);
+            }
             entity.setSecondaryFacing(entity.getFacing());
         }
 
@@ -23103,8 +23114,7 @@ public class TWGameManager extends AbstractGameManager {
      * The mek falls into an unoccupied hex from the given height above
      */
     private Vector<Report> doEntityFall(Entity entity, Coords fallPos, int height, PilotingRollData roll) {
-        // PLAYTEST change compute.d6 -1 to remove the -1.
-        return doEntityFall(entity, fallPos, height, Compute.d6(1) , roll, false, false);
+        return doEntityFall(entity, fallPos, height, Compute.d6(1) - 1 , roll, false, false);
     }
 
     /**

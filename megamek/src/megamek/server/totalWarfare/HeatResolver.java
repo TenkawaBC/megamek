@@ -748,7 +748,7 @@ class HeatResolver extends AbstractTWRuleHandler {
             if (entity.hasQuirk(OptionsConstants.QUIRK_NEG_POOR_LIFE_SUPPORT)) {
                 damageHeat += 5;
             }
-            // PLAYTEST life support heat
+            // PLAYTEST5 life support heat
             if ((lifeSupportCritCount > 0) &&
                   ((damageHeat >= 10) || (torsoMountedCockpit && (damageHeat > 0))) &&
                   !entity.getCrew().isDead() &&
@@ -756,6 +756,7 @@ class HeatResolver extends AbstractTWRuleHandler {
                   !entity.getCrew().isEjected()) {
                 int heatLimitDesc = 1;
                 int damageToCrew = 0;
+                boolean playtestFive = entity.getGame().getOptions().booleanOption(OptionsConstants.PLAYTEST_5);
                 if ((damageHeat >= 47) && mtHeat) {
                     // mekwarrior takes 5 damage
                     heatLimitDesc = 47;
@@ -768,14 +769,20 @@ class HeatResolver extends AbstractTWRuleHandler {
                     // mekwarrior takes 3 damage
                     heatLimitDesc = 32;
                     damageToCrew = 3;
-                } else if (damageHeat >= 25) {
+                } else if (damageHeat >= 25 && !playtestFive) {
                     // mekwarrior takes 2 damage
-                    // PLAYTEST now 20 from 25
+                    heatLimitDesc = 25;
+                    damageToCrew = 2;
+                } else if (damageHeat >= 20 && playtestFive) {
+                    // PLAYTEST5 now 20 from 25
                     heatLimitDesc = 20;
                     damageToCrew = 2;
-                } else if (damageHeat >= 15) {
+                } else if (damageHeat >= 15 && !playtestFive) {
                     // mekwarrior takes 1 damage
-                    // PLAYTEST now 10 from 15.
+                    heatLimitDesc = 15;
+                    damageToCrew = 1;
+                } else if (damageHeat >= 10 && playtestFive) {
+                    // PLAYTEST5 now 10 from 15
                     heatLimitDesc = 10;
                     damageToCrew = 1;
                 }

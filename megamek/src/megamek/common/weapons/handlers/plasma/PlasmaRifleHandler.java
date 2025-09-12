@@ -90,23 +90,33 @@ public class PlasmaRifleHandler extends AmmoWeaponHandler {
             }
 
             // PLAYTEST2 no more reflective reduction
-            /* if (entityTarget.getArmor(hit) > 0 &&
-                  (entityTarget.getArmorType(hit.getLocation()) == EquipmentType.T_ARMOR_REFLECTIVE)) {
-                entityTarget.heatFromExternal += Math.max(1, extraHeat / 2);
-                report.add(Math.max(1, extraHeat / 2));
-                report.choose(true);
-                report.messageId = 3406;
-                report.add(extraHeat);
-                report.add(ArmorType.forEntity(entityTarget, hit.getLocation()).getName());
-            } else */
-            if (entityTarget.getArmor(hit) > 0 &&
+            if (!(entityTarget.getGame().getOptions().booleanOption(OptionsConstants.PLAYTEST_3))) {
+                 if (entityTarget.getArmor(hit) > 0 &&
+                      (entityTarget.getArmorType(hit.getLocation()) == EquipmentType.T_ARMOR_REFLECTIVE)) {
+                    entityTarget.heatFromExternal += Math.max(1, extraHeat / 2);
+                    report.add(Math.max(1, extraHeat / 2));
+                    report.choose(true);
+                    report.messageId = 3406;
+                    report.add(extraHeat);
+                    report.add(ArmorType.forEntity(entityTarget, hit.getLocation()).getName());
+                } 
+            } else if (entityTarget.getArmor(hit) > 0 &&
                   (entityTarget.getArmorType(hit.getLocation()) == EquipmentType.T_ARMOR_HEAT_DISSIPATING)) {
-                entityTarget.heatFromExternal += 0;
-                report.add(0);
-                report.choose(true);
-                report.messageId = 3406;
-                report.add(0);
-                report.add(ArmorType.forEntity(entityTarget, hit.getLocation()).getName());
+                if (entityTarget.getGame().getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+                    entityTarget.heatFromExternal += 0;
+                    report.add(0);
+                    report.choose(true);
+                    report.messageId = 3406;
+                    report.add(0);
+                    report.add(ArmorType.forEntity(entityTarget, hit.getLocation()).getName());
+                } else {
+                    entityTarget.heatFromExternal += Math.max(1,extraHeat/2);
+                    report.add(Math.max(1,extraHeat/2));
+                    report.choose(true);
+                    report.messageId = 3406;
+                    report.add(extraHeat);
+                    report.add(ArmorType.forEntity(entityTarget, hit.getLocation()).getName());
+                }
             } else {
                 entityTarget.heatFromExternal += extraHeat;
                 report.add(extraHeat);
@@ -129,12 +139,12 @@ public class PlasmaRifleHandler extends AmmoWeaponHandler {
                   (nRange > weaponType.getRanges(weapon)[RangeType.RANGE_EXTREME])) {
                 toReturn = (int) Math.floor(toReturn / 2.0);
             }
-            // PLAYTEST half damage to heat dissipating
+            // PLAYTEST3 half damage to heat dissipating
             Entity te;
             if (target instanceof Entity) {
                 te = (Entity) target;
                 if (te.getArmor(hit) > 0 &&
-                      (te.getArmorType(hit.getLocation()) == EquipmentType.T_ARMOR_HEAT_DISSIPATING)) {
+                      (te.getArmorType(hit.getLocation()) == EquipmentType.T_ARMOR_HEAT_DISSIPATING) && (te.getGame().getOptions().booleanOption(OptionsConstants.PLAYTEST_3))) {
                     toReturn = (int) Math.floor(toReturn / 2.0);
                 }
             }

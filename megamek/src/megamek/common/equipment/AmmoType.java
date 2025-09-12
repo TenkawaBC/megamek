@@ -1010,7 +1010,7 @@ public class AmmoType extends EquipmentType {
                 .setStaticTechLevel(SimpleTechLevel.EXPERIMENTAL),
           "131, IO");
 
-    // PLAYTEST2 ammo amounts
+    // PLAYTEST3 ammo amounts
     private static final MunitionMutator ARMOR_PIERCING_MUNITION_MUTATOR_PLAYTEST = new MunitionMutator("Armor" 
           + "-Piercing",
           1.25,
@@ -1084,7 +1084,7 @@ public class AmmoType extends EquipmentType {
                 .setStaticTechLevel(SimpleTechLevel.STANDARD),
           "208, TM");
 
-    // PLAYTEST2 ammo amounts
+    // PLAYTEST3 ammo amounts
     private static final MunitionMutator PRECISION_MUNITION_MUTATOR_PLAYTEST = new MunitionMutator("Precision",
           1.25,
           Munitions.M_PRECISION,
@@ -15753,6 +15753,7 @@ public class AmmoType extends EquipmentType {
                 munition.kgPerShot = base.kgPerShot * (weight / 2.0);
             } else {
                 // PLAYTEST conversion for weight being double
+                // This is for future work, but can be left as is.
                 munition.shots = Math.max(1, (int) (base.shots / weight));
                 munition.kgPerShot = base.kgPerShot * weight;
             }
