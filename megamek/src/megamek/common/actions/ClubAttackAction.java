@@ -528,7 +528,9 @@ public class ClubAttackAction extends PhysicalAttackAction {
             }
             // PLAYTEST3 removing claw modifier
             if (hasClaws) {
-                toHit.addModifier(0, "Mek has claws");
+                if (!game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+                    toHit.addModifier(2, "Mek has claws");
+                }
             }
             if (ae.hasFunctionalArmAES(Mek.LOC_RIGHT_ARM)
                   && ae.hasFunctionalArmAES(Mek.LOC_LEFT_ARM)) {

@@ -47,6 +47,7 @@ import megamek.common.equipment.MiscType;
 import megamek.common.equipment.Mounted;
 import megamek.common.game.Game;
 import megamek.common.interfaces.ILocationExposureStatus;
+import megamek.common.options.OptionsConstants;
 import megamek.common.rolls.TargetRoll;
 import megamek.common.units.Dropship;
 import megamek.common.units.Entity;
@@ -285,7 +286,11 @@ public class KickAttackAction extends PhysicalAttackAction {
         toHit = new ToHitData(base, "base");
 
         // PLAYTEST3 new modifier
-        toHit.addModifier(-1, "Kick");
+        if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+            toHit.addModifier(-1, "Kick");
+        } else {
+            toHit.addModifier(-2, "Kick");
+        }
 
         PhysicalAttackAction.setCommonModifiers(toHit, game, ae, target);
 
@@ -297,8 +302,10 @@ public class KickAttackAction extends PhysicalAttackAction {
 
         // Mule kick?
         if (mule != 0) {
-            // PLAYTEST3 no more mule modifier
-            // toHit.addModifier(mule, "Quad Mek making a mule kick");
+            // PLAYTEST3 no more mule modifie
+            if (!game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+                toHit.addModifier(mule, "Quad Mek making a mule kick");
+            }
         }
 
         // damaged or missing actuators

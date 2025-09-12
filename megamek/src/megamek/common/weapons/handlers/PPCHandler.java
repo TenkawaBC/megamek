@@ -223,29 +223,31 @@ public class PPCHandler extends EnergyWeaponHandler {
         }
         // resolve roll for charged capacitor
         if (chargedCapacitor != 0) {
-            // PLAYTEST2 no more failure on 2.
-            /* if (roll.getIntValue() == 2) {
-                Report r = new Report(3178);
-                r.subject = attackingEntity.getId();
-                r.indent();
-                vPhaseReport.add(r);
-                // Oops, we ruined our day...
-                int wLocation = weapon.getLocation();
-                weapon.setHit(true);
-                for (int i = 0; i < attackingEntity.getNumberOfCriticalSlots(wLocation); i++) {
-                    CriticalSlot slot = attackingEntity.getCritical(wLocation, i);
-                    if ((slot == null)
-                          || (slot.getType() == CriticalSlot.TYPE_SYSTEM)) {
-                        continue;
-                    }
-                    // Only one Crit needs to be damaged.
-                    Mounted<?> mounted = slot.getMount();
-                    if (mounted.equals(weapon)) {
-                        slot.setDestroyed(true);
-                        break;
-                    }
-                } 
-            }*/
+            // PLAYTEST3 no more failure on 2.
+            if (!(game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3))) {
+                if (roll.getIntValue() == 2) {
+                    Report r = new Report(3178);
+                    r.subject = attackingEntity.getId();
+                    r.indent();
+                    vPhaseReport.add(r);
+                    // Oops, we ruined our day...
+                    int wLocation = weapon.getLocation();
+                    weapon.setHit(true);
+                    for (int i = 0; i < attackingEntity.getNumberOfCriticalSlots(wLocation); i++) {
+                        CriticalSlot slot = attackingEntity.getCritical(wLocation, i);
+                        if ((slot == null)
+                              || (slot.getType() == CriticalSlot.TYPE_SYSTEM)) {
+                            continue;
+                        }
+                        // Only one Crit needs to be damaged.
+                        Mounted<?> mounted = slot.getMount();
+                        if (mounted.equals(weapon)) {
+                            slot.setDestroyed(true);
+                            break;
+                        }
+                    } 
+                }
+            }
         }
         return false;
     }

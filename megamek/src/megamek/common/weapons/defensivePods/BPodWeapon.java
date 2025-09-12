@@ -77,7 +77,7 @@ public abstract class BPodWeapon extends AmmoWeapon {
         criticalSlots = 1;
         flags = flags.or(F_ONE_SHOT).or(F_B_POD).or(F_BALLISTIC)
               .or(F_MEK_WEAPON).or(F_TANK_WEAPON);
-        // PLAYTEST2 no longer explosive
+        // PLAYTEST3 no longer explosive
         explosive = false;
         bv = 2;
         cost = 2500;

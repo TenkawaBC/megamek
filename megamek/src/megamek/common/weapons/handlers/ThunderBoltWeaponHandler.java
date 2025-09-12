@@ -83,13 +83,14 @@ public class ThunderBoltWeaponHandler extends MissileWeaponHandler {
         } else {
             minRange = weaponType.getMinimumRange();
         }
-        // PLAYTEST2 under min range no longer halves damage
-        /*
-        if ((nRange <= minRange) && !weapon.isHotLoaded()) {
-            toReturn /= 2;
-            toReturn = Math.floor(toReturn);
+        // PLAYTEST3 under min range no longer halves damage
+        if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+            if ((nRange <= minRange) && !weapon.isHotLoaded()) {
+                toReturn /= 2;
+                toReturn = Math.floor(toReturn);
+            }
         }
-         */
+         
         if (target.isConventionalInfantry()) {
             toReturn = Compute.directBlowInfantryDamage(toReturn,
                   bDirect ? toHit.getMoS() / 3 : 0,

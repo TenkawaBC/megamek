@@ -11610,17 +11610,19 @@ public class TWGameManager extends AbstractGameManager {
                     // attackingEntity.extendBlade(paa.getArm());
                     // check for breaking a nail
                     // PLAYTEST3 No longer can break nails (extendable blade)
-                    /* if (Compute.d6(2) > 9) {
-                        addNewLines();
-                        r = new Report(4456);
-                        r.indent(2);
-                        r.subject = ae.getId();
-                        r.newlines = 0;
-                        addReport(r);
-                        ae.destroyRetractableBlade(armLoc);
+                    if (!(game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3))) {
+                         if (Compute.d6(2) > 9) {
+                            addNewLines();
+                            r = new Report(4456);
+                            r.indent(2);
+                            r.subject = ae.getId();
+                            r.newlines = 0;
+                            addReport(r);
+                            ae.destroyRetractableBlade(armLoc);
+                        }
                     }
                     
-                     */
+                     
                 }
             }
         }

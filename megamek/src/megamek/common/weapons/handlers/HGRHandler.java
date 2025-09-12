@@ -42,6 +42,7 @@ import megamek.common.ToHitData;
 import megamek.common.actions.WeaponAttackAction;
 import megamek.common.game.Game;
 import megamek.common.loaders.EntityLoadingException;
+import megamek.common.options.OptionsConstants;
 import megamek.common.rolls.PilotingRollData;
 import megamek.common.units.EntityWeightClass;
 import megamek.common.units.Mek;
@@ -73,14 +74,16 @@ public class HGRHandler extends GRHandler {
             return true;
         }
 
-        // PLAYTEST2 no more PSR for HGR
-        /* if ((attackingEntity.mpUsed > 0) && (attackingEntity instanceof Mek) && attackingEntity.canFall()
-              // Only check up to assault class, superheavies do not roll.
-              && attackingEntity.getWeightClass() <= EntityWeightClass.WEIGHT_ASSAULT) {
-            // Modifier is weight-based.
-            PilotingRollData psr = getPilotingRollData();
-            game.addPSR(psr);
-        } */
+        // PLAYTEST3 no more PSR for HGR
+        if (!game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+            if ((attackingEntity.mpUsed > 0) && (attackingEntity instanceof Mek) && attackingEntity.canFall()
+                  // Only check up to assault class, superheavies do not roll.
+                  && attackingEntity.getWeightClass() <= EntityWeightClass.WEIGHT_ASSAULT) {
+                // Modifier is weight-based.
+                PilotingRollData psr = getPilotingRollData();
+                game.addPSR(psr);
+            } 
+        }
         return false;
     }
 

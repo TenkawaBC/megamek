@@ -248,7 +248,7 @@ public record Sensor(int type) implements Serializable {
         switch (type) {
             case TYPE_BAP:
             case TYPE_BAPP:
-            case TYPE_WATCHDOG: // PLAYTEST2 making watchdog same as BAP
+            case TYPE_WATCHDOG: // PLAYTEST3 TODO making watchdog same as BAP
             case TYPE_EW_EQUIPMENT:
                 if (te.isVoidSigActive()) {
                     mod += 6;

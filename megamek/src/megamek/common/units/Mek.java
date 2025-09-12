@@ -3363,21 +3363,34 @@ public abstract class Mek extends Entity {
         if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
               Mek.LOC_CENTER_TORSO) > 0) {
 
-            // PLAYTEST HD Gyro changes
-            if (getGyroType() == Mek.GYRO_HEAVY_DUTY) {
-                if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
-                      Mek.LOC_CENTER_TORSO) == 1) {
-                    roll.addModifier(1, "HD Gyro damaged once");
-                } else if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
-                      Mek.LOC_CENTER_TORSO) == 2){
-                    roll.addModifier(2, "HD Gyro damaged twice");
-                }else if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
-                      Mek.LOC_CENTER_TORSO) == 3){
-                    roll.addModifier(3, "HD Gyro damaged thrice");
+            // PLAYTEST2 HD Gyro changes and PSR changes
+            if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+                if (getGyroType() == Mek.GYRO_HEAVY_DUTY) {
+                    if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
+                          Mek.LOC_CENTER_TORSO) == 1) {
+                        roll.addModifier(1, "HD Gyro damaged once");
+                    } else if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
+                          Mek.LOC_CENTER_TORSO) == 2) {
+                        roll.addModifier(2, "HD Gyro damaged twice");
+                    } else if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
+                          Mek.LOC_CENTER_TORSO) == 3) {
+                        roll.addModifier(3, "HD Gyro damaged thrice");
+                    }
+                } else {
+                    // PLAYTEST2 gyro only a 2 modifier now
+                    roll.addModifier(2, "Gyro damaged");
                 }
             } else {
-                // PLAYTEST gyro only a 2 modifier now
-                roll.addModifier(2, "Gyro damaged");
+                if (getGyroType() == Mek.GYRO_HEAVY_DUTY) {
+                    if (getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO,
+                          Mek.LOC_CENTER_TORSO) == 1) {
+                        roll.addModifier(1, "HD Gyro damaged once");
+                    } else {
+                        roll.addModifier(3, "HD Gyro damaged twice");
+                    }
+                } else {
+                    roll.addModifier(3, "Gyro damaged");
+                }
             }
         }
 

@@ -245,8 +245,13 @@ public class PunchAttackAction extends PhysicalAttackAction {
         toHit = new ToHitData(base, "base");
 
         // PLAYTEST3 punch now has -1 mod
-        toHit.addModifier(-1, "Punch");
-
+        if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+            toHit.addModifier(-1, "Punch");
+        } else {
+            toHit.addModifier(0, "Punch");
+        }
+        
+        
         PhysicalAttackAction.setCommonModifiers(toHit, game, ae, target);
 
         // Prone Meks can only punch vehicles in the same hex.
@@ -322,8 +327,12 @@ public class PunchAttackAction extends PhysicalAttackAction {
               !ae.hasWorkingSystem(Mek.ACTUATOR_HAND, armLoc)) {
             toHit.addModifier(1, "Hand actuator destroyed");
         } else if (hasClaws) {
+            
             // PLAYTEST3 claw modifier removed
-            toHit.addModifier(0, "Using Claws");
+            if (!game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+                toHit.addModifier(2, "Using Claws");
+            }
+            
         }
 
         if (hasHandActuator

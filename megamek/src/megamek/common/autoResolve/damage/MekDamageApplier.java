@@ -50,6 +50,7 @@ import megamek.common.ToHitData;
 import megamek.common.compute.Compute;
 import megamek.common.equipment.AmmoType;
 import megamek.common.interfaces.IEntityRemovalConditions;
+import megamek.common.options.OptionsConstants;
 import megamek.common.rolls.TargetRoll;
 import megamek.common.units.Mek;
 import megamek.common.units.QuadMek;
@@ -417,8 +418,17 @@ public record MekDamageApplier(Mek entity, EntityFinalState entityFinalState) im
                 return 1;
             }
         }
+        var crewDamage = 0;
         // PLAYTEST5 crew damage reduced to 1 for ammo exp
-        var crewDamage = ammoExplosion ? 1 : 0;
+        if (entity.getGame().getOptions().booleanOption(OptionsConstants.PLAYTEST_5)) {
+            if (ammoExplosion) { 
+                crewDamage = 1;
+            }
+        } else {
+            if (ammoExplosion) {
+                crewDamage = 2;
+            }
+        }
         var crew = entity.getCrew();
 
         var toHit = new ToHitData();

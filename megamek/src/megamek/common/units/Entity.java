@@ -7001,7 +7001,7 @@ public abstract class Entity extends TurnOrdered
             } else {
                 // Otherwise, find the most dangerous salvo by expected damage and target it this ensures that only 1
                 // AMS targets the strike. Use for non-bays.
-                // PLAYTEST2 ams changes
+                // PLAYTEST3 ams changes
                 final WeaponAttackAction waa = Compute.getHighestExpectedDamage(getGame(), attacksInArc, true);
                 // If there is more than one attack, lets find it
                 WeaponAttackAction secondWaa = null;
@@ -7554,7 +7554,11 @@ public abstract class Entity extends TurnOrdered
         int gyroDamage = getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO, Mek.LOC_CENTER_TORSO);
         if (getGyroType() == Mek.GYRO_HEAVY_DUTY) {
             // PLAYTEST2 no problem with running now
-            gyroDamage=0; // HD gyro run checks
+            if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+                gyroDamage = 0; // HD gyro run checks
+            } else {
+                gyroDamage--;
+            }
         }
         if (((overallMoveType == EntityMovementType.MOVE_RUN) || (overallMoveType == EntityMovementType.MOVE_SPRINT)) &&
               canFall() &&
@@ -9959,8 +9963,8 @@ public abstract class Entity extends TurnOrdered
             return false;
         }
         // if you're charging or finding a club, it's already declared
-        // PLAYTEST2 remove unjamming RAC from list of reasons you can't fire
-        if (isCharging() || isMakingDfa() || isRamming() || isFindingClub() || isOffBoard()) {
+        // PLAYTEST3 remove unjamming RAC from list of reasons you can't fire
+        if (((isUnjammingRAC() && !(game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3))))|| isCharging() || isMakingDfa() || isRamming() || isFindingClub() || isOffBoard()) {
             return false;
         }
         // must be active
@@ -9977,8 +9981,8 @@ public abstract class Entity extends TurnOrdered
      */
     public boolean isEligibleForFiring() {
         // if you're charging, no shooting
-        // PLAYTEST remove unjamming rac from no shooting
-        if (isCharging() || isMakingDfa() || isRamming()) {
+        // PLAYTEST3 remove unjamming rac from no shooting
+        if ((isUnjammingRAC() && !(game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3))) || isCharging() || isMakingDfa() || isRamming()) {
             return false;
         }
 
@@ -10039,8 +10043,8 @@ public abstract class Entity extends TurnOrdered
     public boolean isEligibleForOffboard() {
 
         // if you're charging, no shooting
-        // PLAYTEST remove RAC unjamming
-        if (isCharging() || isMakingDfa()) {
+        // PLAYTEST3 remove RAC unjamming
+        if ((isUnjammingRAC() && !(game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3))) || isCharging() || isMakingDfa()) {
             return false;
         }
 
@@ -11993,11 +11997,6 @@ public abstract class Entity extends TurnOrdered
         }
     }
 
-    // PLAYTEST no longer needed, as it can no longer be destroyed by accident.
-    /**
-     * destroys the first retractable blade critical slot found
-     */
-    /*
     public void destroyRetractableBlade(int loc) {
         // check critical slots
         for (int i = 0; i < getNumberOfCriticalSlots(loc); i++) {
@@ -12018,7 +12017,7 @@ public abstract class Entity extends TurnOrdered
                 return;
             }
         }
-    } */
+    } 
 
     public TeleMissileTracker getTMTracker() {
         return tmTracker;
@@ -13105,16 +13104,34 @@ public abstract class Entity extends TurnOrdered
         int extraBV = 0;
         if (game != null) {
             int totalForceBV = 0;
+            boolean playtestThree = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3);
+            double multiplier = 0.05;
             // PLAYTEST C3 BV Changes. flat 0.3 multiplier other than boosted
-            double multiplier = 0.3;
+            if (playtestThree) {
+                multiplier = 0.3;
+            } 
             if ((hasC3MM() && (calculateFreeC3MNodes() < 2)) ||
                   (hasC3M() && (calculateFreeC3Nodes() < 3)) ||
                   (hasC3S() && (c3Master > NONE)) ||
                   ((hasC3i() || hasNavalC3()) && (calculateFreeC3Nodes() < 5))) {
-                if (hasBoostedC3()) {
-                    multiplier = 0.35;
+                if (!playtestThree) {
+                    totalForceBV += baseBV;
+                    for (Entity entity : game.getC3NetworkMembers(this)) {
+                        if (!equals(entity) && onSameC3NetworkAs(entity)) {
+                            totalForceBV += entity.calculateBattleValue(true, true);
+                        }
+                    }
                 }
-                extraBV = (int) Math.round(baseBV * multiplier);
+                if (hasBoostedC3()) {
+                    if (playtestThree) {
+                        multiplier = 0.35;
+                    } else {
+                        multiplier = 0.07;
+                    }
+                }
+                if (playtestThree) {
+                    extraBV = (int) Math.round(baseBV * multiplier);
+                }
 
             } else if (hasNovaCEWS()) { //Nova CEWS applies 5% to every mek with Nova on the team {
                 for (Entity entity : game.getEntitiesVector()) {
@@ -13123,8 +13140,15 @@ public abstract class Entity extends TurnOrdered
                     }
                 }
                 if (totalForceBV > 0) { //But only if there's at least one other mek with Nova CEWS
-                    extraBV = (int) Math.round(baseBV * multiplier);
+                    if (playtestThree) {
+                        extraBV = (int) Math.round(baseBV * multiplier);
+                    } else {
+                        totalForceBV += baseBV;
+                    }
                 }
+            }
+            if (!playtestThree) {
+                extraBV += (int) Math.round(totalForceBV * multiplier);
             }
         }
         return extraBV;
@@ -13545,48 +13569,63 @@ public abstract class Entity extends TurnOrdered
 
                 } else {
                     // do the damage. random critical slot on each leg, but MASC is not destroyed
-                    // PLAYTEST MASC is now much less lethal
+                    // PLAYTEST2 MASC is now much less lethal
                     int locationCount=0;
                     int[] locationCheck = new int[4];
-                    for (int loc = 0; loc < locations(); loc++) {
-                        if (locationIsLeg(loc) && (getHittableCriticalSlots(loc) > 0)) {
-                            locationCheck[locationCount] = loc;
-                            locationCount++;
+                    if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+                        for (int loc = 0; loc < locations(); loc++) {
+                            if (locationIsLeg(loc) && (getHittableCriticalSlots(loc) > 0)) {
+                                locationCheck[locationCount] = loc;
+                                locationCount++;
+                            }
                         }
-                    }
-                    // Randomly select a location
-                    int selectedLocation = Compute.randomInt(locationCount);
-                    int critRoll = Compute.d6(2);
-                    CriticalSlot slot;
-                    if (critRoll == 12) {
-                        // 3 crits
-                        for (int i = 0; i<3; i++) {
+                        // Randomly select a location
+                        int selectedLocation = Compute.randomInt(locationCount);
+                        int critRoll = Compute.d6(2);
+                        CriticalSlot slot;
+                        if (critRoll == 12) {
+                            // 3 crits
+                            for (int i = 0; i<3; i++) {
+                                vCriticalSlots.put(locationCheck[selectedLocation], new LinkedList<>());
+                                do {
+                                    int slotIndex = Compute.randomInt(getNumberOfCriticalSlots(locationCheck[selectedLocation]));
+                                    slot = getCritical(locationCheck[selectedLocation], slotIndex);
+                                } while ((slot == null) || !slot.isHittable());
+                                vCriticalSlots.get(locationCheck[selectedLocation]).add(slot);
+                            }
+                        } else if (critRoll >= 10) {
+                            for (int i = 0; i<2; i++) {
+                                vCriticalSlots.put(locationCheck[selectedLocation], new LinkedList<>());
+                                do {
+                                    int slotIndex = Compute.randomInt(getNumberOfCriticalSlots(locationCheck[selectedLocation]));
+                                    slot = getCritical(locationCheck[selectedLocation], slotIndex);
+                                } while ((slot == null) || !slot.isHittable());
+                                vCriticalSlots.get(locationCheck[selectedLocation]).add(slot);
+                            }
+                        } else if (critRoll >= 8) {
                             vCriticalSlots.put(locationCheck[selectedLocation], new LinkedList<>());
                             do {
                                 int slotIndex = Compute.randomInt(getNumberOfCriticalSlots(locationCheck[selectedLocation]));
                                 slot = getCritical(locationCheck[selectedLocation], slotIndex);
                             } while ((slot == null) || !slot.isHittable());
                             vCriticalSlots.get(locationCheck[selectedLocation]).add(slot);
+                        } else {
+                            // Holy heck, nothing bad happened other than the failure!
                         }
-                    } else if (critRoll >= 10) {
-                        for (int i = 0; i<2; i++) {
-                            vCriticalSlots.put(locationCheck[selectedLocation], new LinkedList<>());
-                            do {
-                                int slotIndex = Compute.randomInt(getNumberOfCriticalSlots(locationCheck[selectedLocation]));
-                                slot = getCritical(locationCheck[selectedLocation], slotIndex);
-                            } while ((slot == null) || !slot.isHittable());
-                            vCriticalSlots.get(locationCheck[selectedLocation]).add(slot);
-                        }
-                    } else if (critRoll >= 8) {
-                        vCriticalSlots.put(locationCheck[selectedLocation], new LinkedList<>());
-                        do {
-                            int slotIndex = Compute.randomInt(getNumberOfCriticalSlots(locationCheck[selectedLocation]));
-                            slot = getCritical(locationCheck[selectedLocation], slotIndex);
-                        } while ((slot == null) || !slot.isHittable());
-                        vCriticalSlots.get(locationCheck[selectedLocation]).add(slot);
                     } else {
-                        // Holy heck, nothing bad happened other than the failure!
+                        for (int loc = 0; loc < locations(); loc++) {
+                            if (locationIsLeg(loc) && (getHittableCriticalSlots(loc) > 0)) {
+                                CriticalSlot slot;
+                                do {
+                                    int slotIndex = Compute.randomInt(getNumberOfCriticalSlots(loc));
+                                    slot = getCritical(loc, slotIndex);
+                                } while ((slot == null) || !slot.isHittable());
+                                vCriticalSlots.put(loc, new LinkedList<>());
+                                vCriticalSlots.get(loc).add(slot);
+                            }
+                        }
                     }
+                    
                     
                 }
                 // failed a PSR, check for stalling
