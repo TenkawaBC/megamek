@@ -108,7 +108,7 @@ public class ComputeAeroAttackerToHitMods {
 
         // actuator & sensor damage to attacker (includes partial repairs)
         if (weapon != null) {
-            toHit.append(Compute.getDamageWeaponMods(attacker, weapon));
+            toHit.append(Compute.getDamageWeaponMods(attacker, weapon, game));
         }
 
         // heat

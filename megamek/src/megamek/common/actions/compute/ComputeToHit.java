@@ -1706,7 +1706,7 @@ public class ComputeToHit {
         toHit.append(Compute.getSecondaryTargetMod(game, ae, target));
         // actuator & sensor damage to attacker
         if (weapon != null) {
-            toHit.append(Compute.getDamageWeaponMods(ae, weapon));
+            toHit.append(Compute.getDamageWeaponMods(ae, weapon, game));
         }
         // heat
         if (ae.getHeatFiringModifier() != 0) {

@@ -419,8 +419,14 @@ public record MekDamageApplier(Mek entity, EntityFinalState entityFinalState) im
             }
         }
         var crewDamage = 0;
-        // PLAYTEST5 crew damage reduced to 1 for ammo exp
-        if (entity.getGame().getOptions().booleanOption(OptionsConstants.PLAYTEST_5)) {
+        // PLAYTEST5 crew damage reduced to 1 for ammo exp 
+        // Had issues with getting the game object, so this may not work.
+        var playtestFive = false;
+        if (entity.getGame() != null) {
+            playtestFive = entity.getGame().getOptions().booleanOption(OptionsConstants.PLAYTEST_5);
+        }
+        
+        if (playtestFive) {
             if (ammoExplosion) { 
                 crewDamage = 1;
             }

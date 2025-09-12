@@ -66,6 +66,7 @@ import megamek.common.game.Game;
 import megamek.common.interfaces.ILocationExposureStatus;
 import megamek.common.moves.MovePath;
 import megamek.common.moves.MoveStep;
+import megamek.common.options.GameOptions;
 import megamek.common.options.OptionsConstants;
 import megamek.common.pathfinder.AeroGroundPathFinder;
 import megamek.common.planetaryConditions.IlluminationLevel;
@@ -716,8 +717,8 @@ public class FireControl {
      */
     @StaticWrapper
     private ToHitData getDamageWeaponMods(final Entity attacker,
-          final Mounted<?> weapon) {
-        return Compute.getDamageWeaponMods(attacker, weapon);
+          final Mounted<?> weapon, Game game) {
+        return Compute.getDamageWeaponMods(attacker, weapon, game);
     }
 
     private boolean isLargeTarget(final Targetable target) {
@@ -941,7 +942,7 @@ public class FireControl {
         }
 
         // and damage
-        toHit.append(getDamageWeaponMods(shooter, weapon));
+        toHit.append(getDamageWeaponMods(shooter, weapon, game));
 
         // weapon mods
         if (0 != weaponType.getToHitModifier(weapon)) {

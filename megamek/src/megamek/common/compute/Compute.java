@@ -51,6 +51,7 @@ import megamek.common.enums.TechRating;
 import megamek.common.equipment.*;
 import megamek.common.equipment.AmmoType.AmmoTypeEnum;
 import megamek.common.game.Game;
+import megamek.common.options.GameOptions;
 import megamek.common.interfaces.ILocationExposureStatus;
 import megamek.common.moves.MoveStep;
 import megamek.common.options.OptionsConstants;
@@ -2158,7 +2159,7 @@ public class Compute {
      *
      * @return Any applicable damage modifiers
      */
-    public static ToHitData getDamageWeaponMods(Entity attacker, Mounted<?> weapon) {
+    public static ToHitData getDamageWeaponMods(Entity attacker, Mounted<?> weapon, Game game) {
         ToHitData mods = new ToHitData();
         if (attacker instanceof ProtoMek attackingProtoMek) {
             // Head critical slots add to target number of all weapons.
@@ -2224,7 +2225,7 @@ public class Compute {
                         actuatorHits++;
                     }
                     // PLAYTEST5 No more lower arm actuator issues
-                    if (!(attacker.getGame().getOptions().booleanOption(OptionsConstants.PLAYTEST_5))) {
+                    if (!(game.getOptions().booleanOption(OptionsConstants.PLAYTEST_5))) {
                         if (attacker.getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.ACTUATOR_LOWER_ARM, location) > 0  ) {
                             actuatorHits++;
                         } 
