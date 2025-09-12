@@ -119,7 +119,7 @@ public class ATMHandler extends MissileWeaponHandler {
         return hits;
     }
 
-    // PLAYTEST ATMs now cluster in 6s
+    // PLAYTEST2 ATMs now cluster in 6s
     @Override
     protected int calculateNumCluster() {
         return 6;

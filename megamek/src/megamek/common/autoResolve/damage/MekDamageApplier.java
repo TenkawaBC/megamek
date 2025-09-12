@@ -417,7 +417,7 @@ public record MekDamageApplier(Mek entity, EntityFinalState entityFinalState) im
                 return 1;
             }
         }
-        // PLAYTEST crew damage reduced to 1 for ammo exp
+        // PLAYTEST5 crew damage reduced to 1 for ammo exp
         var crewDamage = ammoExplosion ? 1 : 0;
         var crew = entity.getCrew();
 

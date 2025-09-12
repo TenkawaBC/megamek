@@ -87,6 +87,7 @@ public class VehicleFlamerHandler extends AmmoWeaponHandler {
           int bldgAbsorbs) {
         boolean bmmFlamerDamage = game.getOptions().booleanOption(OptionsConstants.BASE_FLAMER_HEAT);
         Entity entity = game.getEntity(weaponAttackAction.getEntityId());
+        boolean playtestFlamers = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2);
 
         if (entity == null) {
             return;
@@ -102,7 +103,8 @@ public class VehicleFlamerHandler extends AmmoWeaponHandler {
             super.handleEntityDamage(entityTarget, vPhaseReport, bldg, hits, nCluster, bldgAbsorbs);
 
             if (bmmFlamerDamage && entityTarget.tracksHeat()) {
-                FlamerHandlerHelper.doHeatDamage(entityTarget, vPhaseReport, weaponType, subjectId, hit);
+                FlamerHandlerHelper.doHeatDamage(entityTarget, vPhaseReport, weaponType, subjectId, hit,
+                      playtestFlamers);
             }
         } else if (flamerDoesHeatOnlyDamage) {
             hit = entityTarget.rollHitLocation(toHit.getHitTable(),
@@ -124,7 +126,7 @@ public class VehicleFlamerHandler extends AmmoWeaponHandler {
             r.add(entityTarget.getLocationAbbr(hit));
             vPhaseReport.addElement(r);
 
-            FlamerHandlerHelper.doHeatDamage(entityTarget, vPhaseReport, weaponType, subjectId, hit);
+            FlamerHandlerHelper.doHeatDamage(entityTarget, vPhaseReport, weaponType, subjectId, hit, playtestFlamers);
         }
     }
 

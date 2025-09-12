@@ -83,7 +83,7 @@ public class ThunderBoltWeaponHandler extends MissileWeaponHandler {
         } else {
             minRange = weaponType.getMinimumRange();
         }
-        // PLAYTEST under min range no longer halves damage
+        // PLAYTEST2 under min range no longer halves damage
         /*
         if ((nRange <= minRange) && !weapon.isHotLoaded()) {
             toReturn /= 2;

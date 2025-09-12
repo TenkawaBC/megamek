@@ -10027,7 +10027,7 @@ public class TWGameManager extends AbstractGameManager {
                 continue;
             }
 
-            // PLAYTEST Allow AMS to target 2 attacks.
+            // PLAYTEST2 Allow AMS to target 2 attacks.
             WeaponAttackAction targetedWAA = null;
             WeaponAttackAction secondWAA = null;
 
@@ -10724,7 +10724,7 @@ public class TWGameManager extends AbstractGameManager {
             target.applyDamage();
         } else if (target instanceof BattleArmor) {
             // 20 damage in 5 point clusters
-            // PLAYTEST 30 damage now in 5 point clusters
+            // PLAYTEST2 30 damage now in 5 point clusters
             final int damage = 5;
 
             // Damage the squad. Loop for 6 times (5*6 = 30 damage.
@@ -11609,7 +11609,7 @@ public class TWGameManager extends AbstractGameManager {
                     // blade retracts to its original mode
                     // attackingEntity.extendBlade(paa.getArm());
                     // check for breaking a nail
-                    // PLAYTEST No longer can break nails (extendable blade)
+                    // PLAYTEST3 No longer can break nails (extendable blade)
                     /* if (Compute.d6(2) > 9) {
                         addNewLines();
                         r = new Report(4456);

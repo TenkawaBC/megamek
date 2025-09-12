@@ -1010,9 +1010,24 @@ public class AmmoType extends EquipmentType {
                 .setStaticTechLevel(SimpleTechLevel.EXPERIMENTAL),
           "131, IO");
 
-    // PLAYTEST ammo amounts
-    private static final MunitionMutator ARMOR_PIERCING_MUNITION_MUTATOR = new MunitionMutator("Armor-Piercing",
+    // PLAYTEST2 ammo amounts
+    private static final MunitionMutator ARMOR_PIERCING_MUNITION_MUTATOR_PLAYTEST = new MunitionMutator("Armor" 
+          + "-Piercing",
           1.25,
+          Munitions.M_ARMOR_PIERCING,
+          new TechAdvancement(TechBase.IS).setIntroLevel(false)
+                .setUnofficial(false)
+                .setTechRating(TechRating.E)
+                .setAvailability(AvailabilityValue.X, AvailabilityValue.X, AvailabilityValue.E, AvailabilityValue.E)
+                .setISAdvancement(3055, 3059, 3063, DATE_NONE, DATE_NONE)
+                .setISApproximate(false, false, false, false, false)
+                .setPrototypeFactions(Faction.FS, Faction.LC)
+                .setProductionFactions(Faction.FS)
+                .setStaticTechLevel(SimpleTechLevel.STANDARD),
+          "208, TM");
+    
+    private static final MunitionMutator ARMOR_PIERCING_MUNITION_MUTATOR = new MunitionMutator("Armor-Piercing",
+          2,
           Munitions.M_ARMOR_PIERCING,
           new TechAdvancement(TechBase.IS).setIntroLevel(false)
                 .setUnofficial(false)
@@ -1069,9 +1084,23 @@ public class AmmoType extends EquipmentType {
                 .setStaticTechLevel(SimpleTechLevel.STANDARD),
           "208, TM");
 
-    // PLAYTEST ammo amounts
-    private static final MunitionMutator PRECISION_MUNITION_MUTATOR = new MunitionMutator("Precision",
+    // PLAYTEST2 ammo amounts
+    private static final MunitionMutator PRECISION_MUNITION_MUTATOR_PLAYTEST = new MunitionMutator("Precision",
           1.25,
+          Munitions.M_PRECISION,
+          new TechAdvancement(TechBase.IS).setIntroLevel(false)
+                .setUnofficial(false)
+                .setTechRating(TechRating.E)
+                .setAvailability(AvailabilityValue.X, AvailabilityValue.X, AvailabilityValue.E, AvailabilityValue.E)
+                .setISAdvancement(3058, 3062, 3066, DATE_NONE, DATE_NONE)
+                .setISApproximate(false, false, false, false, false)
+                .setPrototypeFactions(Faction.FS)
+                .setProductionFactions(Faction.FS)
+                .setStaticTechLevel(SimpleTechLevel.STANDARD),
+          "208, TM");
+    
+    private static final MunitionMutator PRECISION_MUNITION_MUTATOR = new MunitionMutator("Precision",
+          2,
           Munitions.M_PRECISION,
           new TechAdvancement(TechBase.IS).setIntroLevel(false)
                 .setUnofficial(false)
@@ -1097,10 +1126,25 @@ public class AmmoType extends EquipmentType {
                 .setStaticTechLevel(SimpleTechLevel.ADVANCED),
           "353, TO");
 
-    // PLAYTEST ammo amounts
-    private static final MunitionMutator CLAN_IMPROVED_ARMOR_PIERCING_MUNITION_MUTATOR = new MunitionMutator(
+    // PLAYTEST2 ammo amounts
+    private static final MunitionMutator CLAN_IMPROVED_ARMOR_PIERCING_MUNITION_MUTATOR_PLAYTEST = new MunitionMutator(
           "Armor-Piercing",
           1.25,
+          Munitions.M_ARMOR_PIERCING,
+          new TechAdvancement(TechBase.CLAN).setIntroLevel(false)
+                .setUnofficial(false)
+                .setTechRating(TechRating.E)
+                .setAvailability(AvailabilityValue.X, AvailabilityValue.X, AvailabilityValue.E, AvailabilityValue.E)
+                .setClanAdvancement(DATE_NONE, DATE_NONE, 3109, DATE_NONE, DATE_NONE)
+                .setClanApproximate(false, false, false, false, false)
+                .setPrototypeFactions(Faction.CLAN)
+                .setProductionFactions(Faction.CLAN)
+                .setStaticTechLevel(SimpleTechLevel.STANDARD),
+          "208, TM");
+    
+    private static final MunitionMutator CLAN_IMPROVED_ARMOR_PIERCING_MUNITION_MUTATOR = new MunitionMutator(
+          "Armor-Piercing",
+          2,
           Munitions.M_ARMOR_PIERCING,
           new TechAdvancement(TechBase.CLAN).setIntroLevel(false)
                 .setUnofficial(false)
@@ -3440,19 +3484,32 @@ public class AmmoType extends EquipmentType {
         AmmoType.createMunitions(clanImprovedLRMsAmmo, munitions);
 
         // Create the munition types for AC rounds.
+        // PLAYTEST2 ammo types, need to figure how to get the options
         munitions.clear();
-        munitions.add(ARMOR_PIERCING_MUNITION_MUTATOR);
+        /*if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_2) {
+            munitions.add(ARMOR_PIERCING_MUNITION_MUTATOR_PLAYTEST);
+        } else {*/
+            munitions.add(ARMOR_PIERCING_MUNITION_MUTATOR);
+        //}
         munitions.add(CASELESS_MUNITION_MUTATOR);
         munitions.add(FLAK_MUNITION_MUTATOR);
         munitions.add(FLECHETTE_MUNITION_MUTATOR);
-        munitions.add(PRECISION_MUNITION_MUTATOR);
+        //if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_2) {
+        //    munitions.add(PRECISION_MUNITION_MUTATOR_PLAYTEST);
+        //} else{
+            munitions.add(PRECISION_MUNITION_MUTATOR);
+        //}
         munitions.add(TRACER_MUNITION_MUTATOR);
         AmmoType.createMunitions(acAmmos, munitions);
 
         // Create the munition types for Clan Improved AC rounds. Since Improved AC go
         // extinct the ammo will as well.
         munitions.clear();
-        munitions.add(CLAN_IMPROVED_ARMOR_PIERCING_MUNITION_MUTATOR);
+        //if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_2) {
+           // munitions.add(CLAN_IMPROVED_ARMOR_PIERCING_MUNITION_MUTATOR_PLAYTEST);
+        //} else {
+            munitions.add(CLAN_IMPROVED_ARMOR_PIERCING_MUNITION_MUTATOR);
+        //}
         munitions.add(CASELESS_MUNITION_MUTATOR);
         munitions.add(FLAK_MUNITION_MUTATOR);
         munitions.add(CLAN_IMPROVED_FLECHETTE_MUNITION_MUTATOR);

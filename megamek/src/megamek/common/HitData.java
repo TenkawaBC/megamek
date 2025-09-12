@@ -142,27 +142,48 @@ public class HitData {
         return fromFront;
     }
 
-    public void makeArmorPiercing(AmmoType inType, int modifier) {
+    public void makeArmorPiercing(AmmoType inType, int modifier, boolean playtest) {
         specCrit = true;
-        // PLAYTEST AP changes to -2 and -1 respectively
-        if (inType.getRackSize() == 2) {
-            specCritMod = -2;
-        } else if (inType.getRackSize() == 4) {
-            specCritMod = -2;
-        } else if (inType.getRackSize() == 5) {
-            specCritMod = -2;
-        } else if (inType.getRackSize() == 6) {
-            specCritMod = -2;
-        } else if (inType.getRackSize() == 8) {
-            specCritMod = -1;
-        } else if (inType.getRackSize() == 10) {
-            specCritMod = -1;
-        } else if (inType.getRackSize() == 15) {
-            specCritMod = -1;
-        } else if (inType.getRackSize() == 20) {
-            specCritMod = -1;
+        
+        // PLAYTEST2 AP changes to -2 and -1 respectively
+        if (playtest) {
+            if (inType.getRackSize() == 2) {
+                specCritMod = -2;
+            } else if (inType.getRackSize() == 4) {
+                specCritMod = -2;
+            } else if (inType.getRackSize() == 5) {
+                specCritMod = -2;
+            } else if (inType.getRackSize() == 6) {
+                specCritMod = -2;
+            } else if (inType.getRackSize() == 8) {
+                specCritMod = -1;
+            } else if (inType.getRackSize() == 10) {
+                specCritMod = -1;
+            } else if (inType.getRackSize() == 15) {
+                specCritMod = -1;
+            } else if (inType.getRackSize() == 20) {
+                specCritMod = -1;
+            }
+        } else {
+            if (inType.getRackSize() == 2) {
+                specCritMod = -4;
+            } else if (inType.getRackSize() == 4) {
+                specCritMod = -3;
+            } else if (inType.getRackSize() == 5) {
+                specCritMod = -3;
+            } else if (inType.getRackSize() == 6) {
+                specCritMod = -3;
+            } else if (inType.getRackSize() == 8) {
+                specCritMod = -2;
+            } else if (inType.getRackSize() == 10) {
+                specCritMod = -2;
+            } else if (inType.getRackSize() == 15) {
+                specCritMod = -2;
+            } else if (inType.getRackSize() == 20) {
+                specCritMod = -1;
+            }
         }
-
+            
         specCritMod += modifier;
     }
 

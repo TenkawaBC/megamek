@@ -89,7 +89,7 @@ public class PlasmaRifleHandler extends AmmoWeaponHandler {
                 extraHeat += Compute.d6();
             }
 
-            // PLAYTEST no more reflective reduction
+            // PLAYTEST2 no more reflective reduction
             /* if (entityTarget.getArmor(hit) > 0 &&
                   (entityTarget.getArmorType(hit.getLocation()) == EquipmentType.T_ARMOR_REFLECTIVE)) {
                 entityTarget.heatFromExternal += Math.max(1, extraHeat / 2);

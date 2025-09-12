@@ -72,7 +72,7 @@ public class FlamerHandler extends WeaponHandler {
           int nCluster, int bldgAbsorbs) {
         boolean bmmFlamerDamage = game.getOptions().booleanOption(OptionsConstants.BASE_FLAMER_HEAT);
         Entity entity = game.getEntity(weaponAttackAction.getEntityId());
-
+        boolean playtestFlamers = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2);
         if (entity == null) {
             return;
         }
@@ -83,13 +83,14 @@ public class FlamerHandler extends WeaponHandler {
               && currentWeaponMode.equals(Weapon.MODE_FLAMER_HEAT);
         boolean flamerDoesOnlyDamage = currentWeaponMode != null && currentWeaponMode.equals(Weapon.MODE_FLAMER_DAMAGE);
 
-        if (bmmFlamerDamage || flamerDoesOnlyDamage || (flamerDoesHeatOnlyDamage && !entityTarget.tracksHeat())) {
+        if (bmmFlamerDamage || flamerDoesOnlyDamage || (flamerDoesHeatOnlyDamage && !entityTarget.tracksHeat()) || playtestFlamers) {
             super.handleEntityDamage(entityTarget, vPhaseReport, bldg, hits, nCluster, bldgAbsorbs);
 
-            if (bmmFlamerDamage && entityTarget.tracksHeat() &&
+            if ((bmmFlamerDamage || playtestFlamers) && entityTarget.tracksHeat() &&
                   !entityTarget.removePartialCoverHits(hit.getLocation(), toHit.getCover(),
                         ComputeSideTable.sideTable(attackingEntity, entityTarget, weapon.getCalledShot().getCall()))) {
-                FlamerHandlerHelper.doHeatDamage(entityTarget, vPhaseReport, weaponType, subjectId, hit);
+                FlamerHandlerHelper.doHeatDamage(entityTarget, vPhaseReport, weaponType, subjectId, hit,
+                      playtestFlamers);
             }
         } else if (flamerDoesHeatOnlyDamage) {
             hit = entityTarget.rollHitLocation(toHit.getHitTable(),
@@ -109,7 +110,7 @@ public class FlamerHandler extends WeaponHandler {
             report.add(entityTarget.getLocationAbbr(hit));
             vPhaseReport.addElement(report);
 
-            FlamerHandlerHelper.doHeatDamage(entityTarget, vPhaseReport, weaponType, subjectId, hit);
+            FlamerHandlerHelper.doHeatDamage(entityTarget, vPhaseReport, weaponType, subjectId, hit, playtestFlamers);
         }
     }
 

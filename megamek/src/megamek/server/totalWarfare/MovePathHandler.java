@@ -1982,7 +1982,7 @@ class MovePathHandler extends AbstractTWRuleHandler {
             if (rollTarget.getValue() != TargetRoll.CHECK_FALSE) {
                 // Unless we're an ICE- or fuel cell-powered IndustrialMek,
                 // standing up builds heat.
-                // PLAYTEST Standing no longer generates heat
+                // PLAYTEST5 Standing no longer generates heat
                 /* if ((entity instanceof Mek) && entity.hasEngine() && !(((Mek) entity).isIndustrial()
                       && ((entity.getEngine().getEngineType() == Engine.COMBUSTION_ENGINE)
                       || (entity.getEngine().getEngineType() == Engine.FUEL_CELL)))) {

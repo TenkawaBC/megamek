@@ -526,7 +526,7 @@ public class ClubAttackAction extends PhysicalAttackAction {
             if (!ae.hasWorkingSystem(Mek.ACTUATOR_LOWER_ARM, Mek.LOC_LEFT_ARM)) {
                 toHit.addModifier(2, "Lower arm actuator missing or destroyed");
             }
-            // PLAYTEST removing claw modifier
+            // PLAYTEST3 removing claw modifier
             if (hasClaws) {
                 toHit.addModifier(0, "Mek has claws");
             }

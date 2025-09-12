@@ -159,7 +159,7 @@ public class UltraWeaponHandler extends AmmoWeaponHandler {
             return true;
         }
 
-        // PLAYTEST Remove jamming on 2.
+        // PLAYTEST2 Remove jamming on 2.
         /* 
         if ((roll.getIntValue() == 2) && (howManyShots == 2) && !attackingEntity.isConventionalInfantry()) {
             Report r = new Report();

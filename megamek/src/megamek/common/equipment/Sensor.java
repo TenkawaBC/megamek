@@ -140,7 +140,7 @@ public record Sensor(int type) implements Serializable {
     public int getRangeByBracket() {
 
         return switch (type) {
-            // PLAYTEST adding watchdog to be same as BAP
+            // PLAYTEST2 adding watchdog to be same as BAP
             case TYPE_BAP, TYPE_BAPP, TYPE_WATCHDOG -> 12;
             case TYPE_BLOODHOUND -> 16;
             case TYPE_CLAN_AP -> 15;
@@ -248,7 +248,7 @@ public record Sensor(int type) implements Serializable {
         switch (type) {
             case TYPE_BAP:
             case TYPE_BAPP:
-            case TYPE_WATCHDOG: // PLAYTEST making watchdog same as BAP
+            case TYPE_WATCHDOG: // PLAYTEST2 making watchdog same as BAP
             case TYPE_EW_EQUIPMENT:
                 if (te.isVoidSigActive()) {
                     mod += 6;

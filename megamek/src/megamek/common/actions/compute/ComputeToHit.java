@@ -815,15 +815,17 @@ public class ComputeToHit {
         // Autocannon Munitions
 
         // Armor Piercing ammo is a flat +1
-        // PLAYTEST no longer +1 for AP ammo
-        /* 
-        if (((ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.AC) ||
-              (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.LAC) ||
-              (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.AC_IMP) ||
-              (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.PAC)) &&
-              (munition.contains(AmmoType.Munitions.M_ARMOR_PIERCING))) {
-            toHit.addModifier(1, Messages.getString("WeaponAttackAction.ApAmmo"));
-        } */
+        // PLAYTEST2 no longer +1 for AP ammo
+        boolean playtestTwo = game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2);
+        if (!playtestTwo) {
+            if (((ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.AC) ||
+                  (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.LAC) ||
+                  (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.AC_IMP) ||
+                  (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.PAC)) &&
+                  (munition.contains(AmmoType.Munitions.M_ARMOR_PIERCING))) {
+                toHit.addModifier(1, Messages.getString("WeaponAttackAction.ApAmmo"));
+            }
+        }
 
         // Bombs
 

@@ -39,6 +39,8 @@ import megamek.common.Report;
 import megamek.common.equipment.ArmorType;
 import megamek.common.equipment.EquipmentType;
 import megamek.common.equipment.WeaponType;
+import megamek.common.game.Game;
+import megamek.common.options.OptionsConstants;
 import megamek.common.units.Entity;
 
 /**
@@ -51,7 +53,7 @@ public class FlamerHandlerHelper {
      * Handles flamer heat damage.
      */
     public static void doHeatDamage(Entity entityTarget, Vector<Report> vPhaseReport, WeaponType weaponType,
-          int subjectId, HitData hit) {
+          int subjectId, HitData hit, boolean playtest) {
         Report report = new Report(3400);
         report.subject = subjectId;
         report.indent(2);
@@ -68,13 +70,25 @@ public class FlamerHandlerHelper {
         // armor can't reduce damage if there isn't any
         if (entityTarget.getArmor(hit) > 0) {
             // heat dissipating armor divides heat damage by 2
-            // PLAYTEST 0 damage for heat dis
+            // PLAYTEST2 0 damage for heat dis
             if (entityTarget.getArmorType(hit.getLocation()) == EquipmentType.T_ARMOR_HEAT_DISSIPATING) {
-                actualDamage = 0;
-                heatDamageReducedByArmor = true;
+                if (playtest) {
+                    actualDamage = 0;
+                    heatDamageReducedByArmor = true;
+                } else {
+                    actualDamage = heatDamage / 2;
+                    heatDamageReducedByArmor = true;
+                }
+                
+                
                 // reflective armor divides heat damage by 2, with a minimum of 1
-                // PLAYTEST reflective does nothing.
-            } 
+                // PLAYTEST2 reflective does nothing.
+            } else if (entityTarget.getArmorType(hit.getLocation()) == EquipmentType.T_ARMOR_REFLECTIVE) {
+                if (!playtest) {
+                    actualDamage = Math.max(1, heatDamage / 2);
+                    heatDamageReducedByArmor = true;
+                }
+            }
 
         }
 

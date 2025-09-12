@@ -7001,7 +7001,7 @@ public abstract class Entity extends TurnOrdered
             } else {
                 // Otherwise, find the most dangerous salvo by expected damage and target it this ensures that only 1
                 // AMS targets the strike. Use for non-bays.
-                // PLAYTEST ams changes
+                // PLAYTEST2 ams changes
                 final WeaponAttackAction waa = Compute.getHighestExpectedDamage(getGame(), attacksInArc, true);
                 // If there is more than one attack, lets find it
                 WeaponAttackAction secondWaa = null;
@@ -7553,7 +7553,7 @@ public abstract class Entity extends TurnOrdered
 
         int gyroDamage = getBadCriticalSlots(CriticalSlot.TYPE_SYSTEM, Mek.SYSTEM_GYRO, Mek.LOC_CENTER_TORSO);
         if (getGyroType() == Mek.GYRO_HEAVY_DUTY) {
-            // PLAYTEST no problem with running now
+            // PLAYTEST2 no problem with running now
             gyroDamage=0; // HD gyro run checks
         }
         if (((overallMoveType == EntityMovementType.MOVE_RUN) || (overallMoveType == EntityMovementType.MOVE_SPRINT)) &&
@@ -9959,7 +9959,7 @@ public abstract class Entity extends TurnOrdered
             return false;
         }
         // if you're charging or finding a club, it's already declared
-        // PLAYTEST remove unjamming RAC from list of reasons you can't fire
+        // PLAYTEST2 remove unjamming RAC from list of reasons you can't fire
         if (isCharging() || isMakingDfa() || isRamming() || isFindingClub() || isOffBoard()) {
             return false;
         }

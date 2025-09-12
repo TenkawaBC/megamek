@@ -504,7 +504,8 @@ public class ChargeAttackAction extends DisplacementAttackAction {
             if (hexesMoved == 0) {
                 hexesMoved = 1;
             }
-            // PLAYTEST no longer -1 on hexes moved.
+            
+            // PLAYTEST3 no longer -1 on hexes moved.
             return (int) Math
                   .ceil((entity.getWeight() / 10.0)
                         * (hexesMoved)
