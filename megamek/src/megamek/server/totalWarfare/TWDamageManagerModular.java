@@ -2294,6 +2294,34 @@ public class TWDamageManagerModular extends TWDamageManager implements IDamageMa
             return damage;
         }
 
+        // XOTL test changes.
+        // Normal no damage cap, but only 1 internal damage transfer (after location destroyed)
+        // CASE half initial structure (round up) plus all rear armor.
+        /* int cap = 0;
+        int currInternal = mek.getInternal(hit.getLocation());
+        if (cased) {
+            int halfInternal = (int) Math.ceil(mek.getOInternal(hit.getLocation())/2);
+            // Current internal is more than half original, damage is more than half original
+            if (currInternal > halfInternal && damage > halfInternal) {
+               cap = halfInternal; 
+            } else if (damage < currInternal){
+                // damage is less than current internal left, so just return the damage
+                return damage;
+            } else {
+                // cap the damage at the currentInternal, it will kill the location
+                cap = currInternal;
+            }
+        } else {
+            // No Case
+            if (damage <= currInternal) {
+                return damage;
+            } else {
+                // destroy location and 1 transfer
+                cap = currInternal+1;
+            }
+        }
+        
+         */
         report = new Report(cased ? 6133 : 6132);
         report.subject = entityId;
         report.indent(3);

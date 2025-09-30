@@ -1126,7 +1126,7 @@ public class AmmoType extends EquipmentType {
                 .setStaticTechLevel(SimpleTechLevel.ADVANCED),
           "353, TO");
 
-    // PLAYTEST2 ammo amounts
+    // PLAYTEST3 ammo amounts
     private static final MunitionMutator CLAN_IMPROVED_ARMOR_PIERCING_MUNITION_MUTATOR_PLAYTEST = new MunitionMutator(
           "Armor-Piercing",
           1.25,

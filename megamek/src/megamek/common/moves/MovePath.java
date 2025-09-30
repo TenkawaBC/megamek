@@ -436,7 +436,7 @@ public class MovePath implements Cloneable, Serializable {
                 step.setDanger(step.isDanger() || (step.isJumping()));
             }
         }
-
+        
         // if we're an aerospace unit on a ground map and have passed over a hostile
         // unit
         // record this fact - it is useful for debugging thus we leave the commented out

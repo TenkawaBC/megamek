@@ -338,9 +338,10 @@ public class SharedUtility {
             }
 
             // check if we've moved into water
-            rollTarget = entity.checkWaterMove(step, overallMoveType, curHex,
-                  lastPos, curPos, isPavementStep);
+           rollTarget = entity.checkWaterMove(step, overallMoveType, curHex,
+                      lastPos, curPos, isPavementStep);
             checkNag(rollTarget, nagReport, psrList);
+
 
             // check for non-heat tracking entering a fire
             boolean underwater = curHex.containsTerrain(Terrains.WATER)

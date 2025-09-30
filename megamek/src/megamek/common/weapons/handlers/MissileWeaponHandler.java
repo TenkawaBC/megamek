@@ -200,7 +200,7 @@ public class MissileWeaponHandler extends AmmoWeaponHandler {
               && !mLinker.isDestroyed() && !mLinker.isMissing()
               && !mLinker.isBreached() && mLinker.getType().hasFlag(MiscType.F_APOLLO))
               && (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.MRM)) {
-            // PLAYTEST2 apollo is -2 now cumulative with MRM
+            // PLAYTEST3 apollo is -2 now cumulative with MRM
             if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
                 nMissilesModifier -= 2;
             } else {
@@ -210,7 +210,7 @@ public class MissileWeaponHandler extends AmmoWeaponHandler {
         } else if (((mLinker != null)
               && (mLinker.getType() instanceof MiscType) && !mLinker.isDestroyed() && !mLinker.isMissing() && !mLinker.isBreached() && !mLinker.getType().hasFlag(MiscType.F_APOLLO))
               && (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.MRM && game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3))) {
-            // PLAYTEST2 change modifier to -1 cluster hits with MRMs and no apollo
+            // PLAYTEST3 change modifier to -1 cluster hits with MRMs and no apollo
             nMissilesModifier -= 1;
         } else if (ammoType.getAmmoType() == AmmoType.AmmoTypeEnum.ATM) {
             if (bECMAffected) {

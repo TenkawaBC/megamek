@@ -402,11 +402,16 @@ public abstract class MekWithArms extends Mek {
     }
 
     private void addAttemptStandingPenalties(PilotingRollData roll) {
+        // PLAYTEST2 Standing has -1 PSR
+        if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+            roll.addModifier(-1, "Trying to stand");
+        }
+        
         if (hasQuirk(OptionsConstants.QUIRK_NEG_NO_ARMS)) {
             roll.addModifier(2, "no/minimal arms");
             return;
         }
-
+        
         if (game.getOptions().booleanOption(OptionsConstants.ADVANCED_GROUND_MOVEMENT_TAC_OPS_ATTEMPTING_STAND)) {
             for (int loc : List.of(Mek.LOC_RIGHT_ARM, Mek.LOC_LEFT_ARM)) {
                 if (isLocationBad(loc)) {

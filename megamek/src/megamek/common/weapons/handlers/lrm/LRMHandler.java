@@ -273,15 +273,15 @@ public class LRMHandler extends MissileWeaponHandler {
 
         // ELRMs only hit with half their rack size rounded up at minimum range.
         // Ignore this for space combat. 1 hex is 18km across.
-        // PLAYTEST2 elrms no longer halve under minimum
-        /*
-        if (weaponType instanceof ExtendedLRMWeapon
-              && !game.getBoard().isSpace()
-              && (nRange <= weaponType.getMinimumRange())) {
-            rackSize = rackSize / 2 + rackSize % 2;
-            minRangeELRMAttack = true;
+        // PLAYTEST3 elrms no longer halve under minimum
+        if (!game.getOptions().booleanOption(OptionsConstants.PLAYTEST_3)) {
+            if (weaponType instanceof ExtendedLRMWeapon
+                  && !game.getBoard().isSpace()
+                  && (nRange <= weaponType.getMinimumRange())) {
+                rackSize = rackSize / 2 + rackSize % 2;
+                minRangeELRMAttack = true;
+            }
         }
-         */
 
         if (allShotsHit()) {
             // We want buildings and large craft to be able to affect this number with AMS
