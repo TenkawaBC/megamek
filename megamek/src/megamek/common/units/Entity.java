@@ -8034,12 +8034,10 @@ public abstract class Entity extends TurnOrdered
         } else {
             mod = 1;
         }
-        // PLAYTEST2 water changes
+        // PLAYTEST2 water PSR changes
         if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
-            if (waterLevel > 1 && overallMoveType == EntityMovementType.MOVE_RUN) {
+            if (waterLevel >= 1 && overallMoveType == EntityMovementType.MOVE_RUN) {
                 roll.append(new PilotingRollData(getId(), 0, "entering Depth " + waterLevel + " Water"));
-            } else if (waterLevel == 1 && overallMoveType == EntityMovementType.MOVE_RUN) {
-                roll.append(new PilotingRollData(getId(), -1, "entering Depth " + waterLevel + " Water"));
             } else {
                 roll.addModifier(TargetRoll.CHECK_FALSE, "No need for roll");
             }

@@ -1000,7 +1000,6 @@ public class MoveStep implements Serializable {
                           EntityMovementMode.TRIPOD) {
                         isRunProhibited = true;
                     }
-                    LOGGER.debug("Running should be checked", nMove);
                 } else {
                     isRunProhibited = true;
                 }
@@ -2760,7 +2759,7 @@ public class MoveStep implements Serializable {
                               ((entity instanceof Mek) || (entity instanceof ProtoMek))) {
                             mp += 2;
                         } else {
-                            // PLAYTEST2 Water changes
+                            // PLAYTEST2 Water changes - MP values
                             if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
                                 mp += 2;
                             } else {
@@ -3004,7 +3003,7 @@ public class MoveStep implements Serializable {
               isThisStepBackwards() &&
               !(isJumping() && isUsingMekJumpBooster) &&
               (((destAlt != srcAlt) &&
-                    !game.getOptions().booleanOption(OptionsConstants.ADVANCED_GROUND_MOVEMENT_TAC_OPS_WALK_BACKWARDS))
+                    !game.getOptions().booleanOption(OptionsConstants.ADVANCED_GROUND_MOVEMENT_TAC_OPS_WALK_BACKWARDS) && !game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2))
                     ||
                     ((game.getOptions().booleanOption(OptionsConstants.ADVANCED_GROUND_MOVEMENT_TAC_OPS_WALK_BACKWARDS) || game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2))
                           &&
@@ -3161,7 +3160,7 @@ public class MoveStep implements Serializable {
               !(isJumping() && isUsingMekJumpBooster)) {
             // Generally forbidden without TacOps Expanded Backward Movement p.22
             // PLAYTEST2 allow backwards up elevation changes
-            if (!game.getOptions().booleanOption(OptionsConstants.ADVANCED_GROUND_MOVEMENT_TAC_OPS_WALK_BACKWARDS) || !game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+            if (!game.getOptions().booleanOption(OptionsConstants.ADVANCED_GROUND_MOVEMENT_TAC_OPS_WALK_BACKWARDS) && !game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
                 return false;
             }
             // Even with Expanded Backward Movement, ...
@@ -3193,8 +3192,7 @@ public class MoveStep implements Serializable {
         // Can't run into water unless hovering, naval, first step, using a
         // bridge, or fly.
         // PLAYTEST2 water changes
-        if (!game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
-            LOGGER.debug("Checking for running into water");
+        if (game.getOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
             if (((movementType == EntityMovementType.MOVE_RUN) ||
                   (movementType == EntityMovementType.MOVE_SPRINT) ||
                   (movementType == EntityMovementType.MOVE_VTOL_RUN) ||
@@ -3215,7 +3213,6 @@ public class MoveStep implements Serializable {
                   !dest.equals(entity.getPosition()) &&
                   !isFirstStep() &&
                   !isPavementStep()) {
-                LOGGER.debug("Running into water, should not return for a mek");
                 return false;
             }
         } else {
