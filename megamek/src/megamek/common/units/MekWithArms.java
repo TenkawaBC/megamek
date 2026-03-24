@@ -417,8 +417,11 @@ public abstract class MekWithArms extends Mek {
     }
 
     private void addAttemptStandingPenalties(PilotingRollData roll) {
-        // PLAYTEST2 Standing has -1 PSR
-        if (gameOptions().booleanOption(OptionsConstants.PLAYTEST_2)) {
+        boolean twrules = false;
+        twrules = gameOptions().booleanOption(OptionsConstants.TWRULES);
+
+        // PLAYTEST2 with TW rules or 2026 core rules. Standing has -1 PSR
+        if ((gameOptions().booleanOption(OptionsConstants.PLAYTEST_2) && twrules) || !twrules) {
             roll.addModifier(-1, "Trying to stand");
         }
 
