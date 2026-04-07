@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000-2005 - Ben Mazur (bmazur@sev.org).
- * Copyright (C) 2002-2025 The MegaMek Team. All Rights Reserved.
+ * Copyright (C) 2002-2026 The MegaMek Team. All Rights Reserved.
  *
  * This file is part of MegaMek.
  *
@@ -64,6 +64,7 @@ import megamek.common.actions.EntityAction;
 import megamek.common.actions.PushAttackAction;
 import megamek.common.actions.TeleMissileAttackAction;
 import megamek.common.actions.WeaponAttackAction;
+import megamek.common.actions.WoodsClearingAttackAction;
 import megamek.common.annotations.Nullable;
 import megamek.common.battleArmor.BattleArmor;
 import megamek.common.battleArmor.BattleArmorHandles;
@@ -421,6 +422,7 @@ public abstract class Entity extends TurnOrdered
      * 1slot) searchlight.
      */
     protected boolean hasExternalSearchlight = false;
+    protected boolean searchlightOverride = false;
     protected boolean illuminated = false;
     protected boolean searchlightIsActive = false;
     protected boolean usedSearchlight = false;
@@ -485,6 +487,7 @@ public abstract class Entity extends TurnOrdered
 
     public boolean spotting;
     private boolean clearingMinefield = false;
+    private boolean clearingWoods = false;
     protected int killerId = Entity.NONE;
     private int offBoardDistance = 0;
     private OffBoardDirection offBoardDirection = OffBoardDirection.NONE;
@@ -545,6 +548,11 @@ public abstract class Entity extends TurnOrdered
     protected int structureTechLevel = TechConstants.T_TECH_UNKNOWN;
 
     protected String source = "";
+
+    /**
+     * The tech faction associated with this Entity, used to filter available tech by faction.
+     */
+    protected Faction techFaction = Faction.NONE;
 
     /**
      * Keeps track of whether this Entity was hit by a TSEMP this turn.
@@ -698,6 +706,29 @@ public abstract class Entity extends TurnOrdered
     private int swarmAttackerId = Entity.NONE;
 
     /**
+     * The id of the target entity this infantry unit is engaged in boarding combat with. NONE (-1) indicates not in
+     * infantry vs. infantry combat. Target can be AbstractBuildingEntity or Large Naval Vessel.
+     */
+    private int infantryCombatTargetId = Entity.NONE;
+
+    /**
+     * True if this entity is the attacker in an infantry vs. infantry combat. False if defender. Only meaningful if
+     * infantryCombatTargetId != NONE.
+     */
+    private boolean infantryCombatIsAttacker = false;
+
+    /**
+     * Number of turns this entity has been engaged in infantry vs. infantry combat. Used for tracking combat duration.
+     */
+    private int infantryCombatTurnCount = 0;
+
+    /**
+     * True if this entity (as attacker) wants to withdraw from infantry combat. Processed during End Phase before
+     * combat resolution.
+     */
+    private boolean infantryCombatWantsWithdrawal = false;
+
+    /**
      * Flag that indicates that the unit can still be salvaged (given enough time and parts).
      */
     private boolean salvageable = true;
@@ -842,10 +873,16 @@ public abstract class Entity extends TurnOrdered
     // roll for sensor check
     private int sensorCheck;
 
-    // the roll for ghost targets
+    // the roll for ghost targets (Legacy mode)
     private Roll ghostTargetRoll;
-    // the roll to override ghost targets
+    // the roll to override ghost targets (Legacy mode)
     private int ghostTargetOverride;
+
+    // Standard mode ghost target bonuses (per TO:AR rules)
+    // Accumulated +N to-hit for attacks AGAINST this unit (from friendly ghost targets)
+    private int ghostTargetDefensiveBonus;
+    // Accumulated +N to-hit for attacks BY this unit (from enemy ghost targets)
+    private int ghostTargetOffensiveBonus;
 
     // Tac Ops HeatSink Coolant Failure number
     protected int heatSinkCoolantFailureFactor;
@@ -1065,12 +1102,17 @@ public abstract class Entity extends TurnOrdered
     }
 
     protected boolean hasViableWeapons() {
-        int totalDmg = Compute.computeTotalDamage(getTotalWeaponList());
+        // Bomb-mounted weapons are expendable ordnance, not inherent to the unit,
+        // and should never factor into crippled status determination.
+        List<WeaponMounted> nonBombWeapons = getTotalWeaponList().stream()
+              .filter(w -> !w.isBombMounted())
+              .toList();
+
+        int totalDmg = Compute.computeTotalDamage(nonBombWeapons);
 
         // Find any weapons with range of 6+
         boolean hasRangeSixPlus = false;
-        List<WeaponMounted> weaponList = getTotalWeaponList();
-        for (WeaponMounted weapon : weaponList) {
+        for (WeaponMounted weapon : nonBombWeapons) {
             if (weapon.isCrippled()) {
                 continue;
             }
@@ -1193,6 +1235,18 @@ public abstract class Entity extends TurnOrdered
         for (Transporter transport : getTransports()) {
             transport.setEntity(this);
             transport.setGame(game);
+        }
+        // carriedObjects embeds entity references (e.g. HandheldWeapon) that get serialized as part of this entity,
+        // producing stale duplicates disconnected from inGameObjects. Replace them with the canonical game instances.
+        if (game != null && carriedObjects != null) {
+            for (var entry : carriedObjects.entrySet()) {
+                if (entry.getValue() instanceof Entity carried) {
+                    Entity canonical = game.getEntity(carried.getId());
+                    if (canonical != null) {
+                        entry.setValue(canonical);
+                    }
+                }
+            }
         }
     }
 
@@ -1453,6 +1507,16 @@ public abstract class Entity extends TurnOrdered
     public void recalculateTechAdvancement() {
         initTechAdvancement();
         for (Mounted<?> m : getEquipment()) {
+            // ProtoMek EI is built-in per IO:AE p.69 -- only count toward tech level
+            // when tracking neural interface hardware
+            if (isProtoMek()
+                  && (m.getType() instanceof MiscType)
+                  && m.getType().hasFlag(MiscType.F_EI_INTERFACE)
+                  && ((game == null) || !gameOptions().booleanOption(
+                  OptionsConstants.ADVANCED_TRACK_NEURAL_INTERFACE_HARDWARE))) {
+                continue;
+            }
+
             compositeTechLevel.addComponent(m.getType());
             if (m.isArmored()) {
                 compositeTechLevel.addComponent(TA_ARMORED_COMPONENT);
@@ -4409,6 +4473,35 @@ public abstract class Entity extends TurnOrdered
         addEquipment(mounted, loc, rearMounted);
     }
 
+    /**
+     * Adds the given mounted equipment to the unit in the given location (front-facing). This method adds the mounted
+     * to the right equipment lists, updates the unit's tech level and adds one-shot ammo where necessary. Overriding
+     * methods may perform more tasks. This method, by default, does *NOT* create crit slots, update or add linkages nor
+     * handle secondary locations.
+     *
+     * @param mounted The new equipment
+     * @param loc     The location; may be Entity.LOC_NONE
+     *
+     * @throws LocationFullException When the location is full
+     * @see #addEquipment(Mounted, int, boolean)
+     */
+    public final void addEquipment(Mounted<?> mounted, int loc) throws LocationFullException {
+        addEquipment(mounted, loc, false);
+    }
+
+    /**
+     * Adds the given mounted equipment to the unit in the given location, possibly rear-facing depending on the given
+     * parameter. This method adds the mounted to the right equipment lists, updates the unit's tech level and adds
+     * one-shot ammo where necessary. Overriding methods may perform more tasks. This method, by default, does *NOT*
+     * create crit slots, update or add linkages nor handle secondary locations. Overrides for unit types may however do
+     * that.
+     *
+     * @param mounted     The new equipment
+     * @param loc         The location; may be Entity.LOC_NONE
+     * @param rearMounted True to make the equipment rear-facing
+     *
+     * @throws LocationFullException When the location is full
+     */
     public void addEquipment(Mounted<?> mounted, int loc, boolean rearMounted) throws LocationFullException {
         mounted.setLocation(loc, rearMounted);
         equipmentList.add(mounted);
@@ -5055,7 +5148,7 @@ public abstract class Entity extends TurnOrdered
     /**
      * Check if the entity has an arbitrary type of misc equipment
      *
-     * @param flag      A MiscType.F_XXX
+     * @param flag          A MiscType.F_XXX
      * @param secondaryFlag A MiscType.S_XXX or null for don't care
      *
      * @return true if at least one ready item.
@@ -5089,10 +5182,10 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Returns true when the entity has a MiscType equipment of the given internalName, regardless of its state. When
-     * available, use EquipmentTypeLookup internal names (or add one when it is not yet used for a MiscType). Note that
-     * any internal name, even of weapons, can be given but this method only searches misc equipment and will not find
-     * weapons.
+     * Returns true when the entity has a MiscType equipment of the given internalName, regardless of its state or
+     * location (it may be unallocated). When available, use EquipmentTypeLookup internal names (or add one when it is
+     * not yet used for a MiscType). Note that any internal name, even of weapons, can be given but this method only
+     * searches misc equipment and will not find weapons.
      *
      * @param internalName The internal name of the misc, e.g. EquipmentTypeLookup.BA_MYOMER_BOOSTER
      *
@@ -5125,7 +5218,9 @@ public abstract class Entity extends TurnOrdered
      * Returns true when the entity has a MiscType equipment of the given internalName, regardless of its state, in the
      * given location. When available, use EquipmentTypeLookup internal names (or add one when it is not yet used for a
      * MiscType). Note that any internal name, even of weapons, can be given but this method only searches misc
-     * equipment and will not find weapons.
+     * equipment and will not find weapons. Note that for BA, this checks the trooper locations (squad, trooper 1...)
+     * rather than the mount locations (arm, body). For BA, {@link BattleArmor#hasMiscInMountLocation} can be
+     * used instead.
      *
      * @param internalName The internal name of the misc, e.g. EquipmentTypeLookup.BA_MYOMER_BOOSTER
      * @param location     The location, e.g. Mek.LOC_LEFT_TORSO
@@ -5219,9 +5314,9 @@ public abstract class Entity extends TurnOrdered
     /**
      * Check if the entity has an arbitrary type of misc equipment
      *
-     * @param flag      A MiscType.F_XXX
+     * @param flag          A MiscType.F_XXX
      * @param secondaryFlag A MiscType.S_XXX or null for don't care
-     * @param location  The location to check e.g. Mek.LOC_LEFT_ARM
+     * @param location      The location to check e.g. Mek.LOC_LEFT_ARM
      *
      * @return true if at least one ready item.
      */
@@ -5242,6 +5337,19 @@ public abstract class Entity extends TurnOrdered
                 }
             }
         }
+        return false;
+    }
+
+    /**
+     * Checks if this entity has a front-mounted chainsaw or dual saw.
+     *
+     * <p>Per TM pp.241-243, a front-mounted saw on a vehicle can be used in a modified
+     * charge attack. By default, entities do not have front-mounted saws; only vehicles (Tank subclass) can have
+     * them.</p>
+     *
+     * @return true if this entity has a working front-mounted chainsaw or dual saw
+     */
+    public boolean hasFrontMountedSaw() {
         return false;
     }
 
@@ -5398,7 +5506,8 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Adds a critical to the first available slot in the location.
+     * Adds a critical to the first available slot in the location. If the location is invalid or Entity.LOC_NONE, this
+     * method does nothing.
      *
      * @return true if there was room for the critical
      */
@@ -5638,14 +5747,14 @@ public abstract class Entity extends TurnOrdered
     protected abstract int[] getNoOfSlots();
 
     /**
-     * Returns the number of total critical slots in a location
+     * @return The number of total critical slots in the given location.
      */
-    public int getNumberOfCriticalSlots(int loc) {
+    public int getNumberOfCriticalSlots(int location) {
         int[] noOfSlots = getNoOfSlots();
-        if ((null == noOfSlots) || (loc >= noOfSlots.length) || (loc == LOC_NONE)) {
+        if ((null == noOfSlots) || (location >= noOfSlots.length) || (location == LOC_NONE)) {
             return 0;
         }
-        return noOfSlots[loc];
+        return noOfSlots[location];
     }
 
     /**
@@ -5924,26 +6033,59 @@ public abstract class Entity extends TurnOrdered
         if ((ghostTargetRoll == null) || (active && (getGhostTargetRollMoS() < 0)) || isShutDown()) {
             return false;
         }
-        boolean hasGhost = false;
         for (MiscMounted m : getMisc()) {
-            MiscType type = m.getType();
-            // TacOps p. 100 Angle ECM can have ECM/ECCM and Ghost Targets at
-            // the same time
-            if (type.hasFlag(MiscType.F_ECM) &&
-                  (m.curMode().equals("Ghost Targets") ||
-                        m.curMode().equals("ECM & Ghost Targets") ||
-                        m.curMode().equals("ECCM & Ghost Targets")) &&
-                  !(m.isInoperable() || getCrew().isUnconscious())) {
-                hasGhost = true;
-            }
-            if (type.hasFlag(MiscType.F_COMMUNICATIONS) &&
-                  m.curMode().equals("Ghost Targets") &&
-                  (getTotalCommGearTons() >= 7) &&
-                  !(m.isInoperable() || getCrew().isUnconscious())) {
-                hasGhost = true;
+            if (isGhostTargetCapable(m)) {
+                return true;
             }
         }
-        return hasGhost;
+        return false;
+    }
+
+    /**
+     * Checks if this entity has any equipment set to a Ghost Targets mode, without checking PSR success, spaceborne
+     * status, or shutdown state. Used for determining turn eligibility in the PRE_FIRING phase (Standard ghost target
+     * mode).
+     *
+     * @return true if the entity has qualifying equipment in a Ghost Targets mode
+     */
+    public boolean hasGhostTargetEquipment() {
+        for (MiscMounted m : getMisc()) {
+            if (isGhostTargetCapable(m)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if the given equipment is currently set to a Ghost Targets mode and is operational. Used by both
+     * turn eligibility checks and equipment selection in the PRE_FIRING phase.
+     *
+     * @param equipment the misc equipment to check
+     *
+     * @return true if this equipment is generating ghost targets
+     */
+    public boolean isGhostTargetCapable(MiscMounted equipment) {
+        if (equipment.isInoperable() || getCrew().isUnconscious()) {
+            return false;
+        }
+        MiscType type = equipment.getType();
+        if (type.hasFlag(MiscType.F_ECM)
+              && (equipment.curMode().equals("Ghost Targets")
+              || equipment.curMode().equals("ECM & Ghost Targets")
+              || equipment.curMode().equals("ECCM & Ghost Targets"))) {
+            return true;
+        }
+        if (type.hasFlag(MiscType.F_COMMUNICATIONS)
+              && equipment.curMode().equals("Ghost Targets")
+              && (getTotalCommGearTons() >= 7)) {
+            return true;
+        }
+        if (type.hasFlag(MiscType.F_COMMAND_CONSOLE)
+              && equipment.curMode().equals("Ghost Targets")) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -6209,9 +6351,9 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Returns whether this entity has a Targeting Computer or EI Interface that is in aimed shot mode.
-     * This also returns true for Triple-Core Processor + VDNI/BVDNI combinations,
-     * which grant aimed shot capability as if equipped with a Targeting Computer.
+     * Returns whether this entity has a Targeting Computer or EI Interface that is in aimed shot mode. This also
+     * returns true for Triple-Core Processor + VDNI/BVDNI combinations, which grant aimed shot capability as if
+     * equipped with a Targeting Computer.
      */
     public boolean hasAimModeTargComp() {
         // Active EI Interface grants aimed shot capability (IO p.69)
@@ -6821,8 +6963,7 @@ public abstract class Entity extends TurnOrdered
                 master = m.getC3Master();
             } else if ((m.hasBoostedC3() &&
                   !ComputeECM.isAffectedByAngelECM(m, m.getPosition(), master.getPosition())) ||
-                  !(ComputeECM.isAffectedByECM(m, m.getPosition(), master.getPosition())))
-            {
+                  !(ComputeECM.isAffectedByECM(m, m.getPosition(), master.getPosition()))) {
                 if ((master.hasBoostedC3() &&
                       !ComputeECM.isAffectedByAngelECM(master, master.getPosition(), master.getPosition())) ||
                       !(ComputeECM.isAffectedByECM(master, master.getPosition(), master.getPosition()))) {
@@ -6833,9 +6974,13 @@ public abstract class Entity extends TurnOrdered
                     // Somehow still failed; this should not be possible!
                     throw new IllegalStateException(
                           "C3 slave/master connection not affected by ECM/AECM but master is!" +
-                          String.format(
-                            "\nSlave: %s @ %s\nMaster: %s @ %s", m, master, m.getPosition(), master.getPosition()
-                          )
+                                String.format(
+                                      "\nSlave: %s @ %s\nMaster: %s @ %s",
+                                      m,
+                                      master,
+                                      m.getPosition(),
+                                      master.getPosition()
+                                )
                     );
                 }
             } else {
@@ -7168,6 +7313,7 @@ public abstract class Entity extends TurnOrdered
         setSpotting(false);
         spotTargetId = Entity.NONE;
         setClearingMinefield(false);
+        setClearingWoods(false);
         setUnjammingRAC(false);
         crew.setKoThisRound(false);
         m_lNarcedBy |= m_lPendingNarc;
@@ -7247,9 +7393,13 @@ public abstract class Entity extends TurnOrdered
             activeSensor = nextSensor;
         }
 
-        // ghost target roll
+        // ghost target roll (Legacy mode)
         ghostTargetRoll = Compute.rollD6(2);
         ghostTargetOverride = Compute.d6(2);
+
+        // clear Standard mode ghost target bonuses
+        ghostTargetDefensiveBonus = 0;
+        ghostTargetOffensiveBonus = 0;
 
         // update fatigue count
         if ((null != crew) && isDeployed()) {
@@ -9287,8 +9437,8 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     *  Clear the Vector of picked-up MekWarrior IDs so that MegaMek issue #3191 does not recur.
-     *  Called when units are initially added to the game (as they should have no carried pilots then).
+     * Clear the Vector of picked-up MekWarrior IDs so that MegaMek issue #3191 does not recur. Called when units are
+     * initially added to the game (as they should have no carried pilots then).
      */
     public void resetPickedUpMekWarriors() {
         pickedUpMekWarriors.clear();
@@ -9945,6 +10095,95 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
+     * Get the ID of the target entity this infantry is engaged in combat with.
+     *
+     * @return the target entity ID, or Entity.NONE if not in infantry combat
+     */
+    public int getInfantryCombatTargetId() {
+        return infantryCombatTargetId;
+    }
+
+    /**
+     * Set the ID of the target entity this infantry is engaged in combat with.
+     *
+     * @param targetId the target entity ID, or Entity.NONE to clear
+     */
+    public void setInfantryCombatTargetId(int targetId) {
+        infantryCombatTargetId = targetId;
+    }
+
+    /**
+     * Check if this entity is the attacker in infantry combat.
+     *
+     * @return true if attacker, false if defender (only meaningful if in combat)
+     */
+    public boolean isInfantryCombatAttacker() {
+        return infantryCombatIsAttacker;
+    }
+
+    /**
+     * Set whether this entity is the attacker in infantry combat.
+     *
+     * @param isAttacker true if attacker, false if defender
+     */
+    public void setInfantryCombatAttacker(boolean isAttacker) {
+        infantryCombatIsAttacker = isAttacker;
+    }
+
+    /**
+     * Get the number of turns this entity has been in infantry combat.
+     *
+     * @return turn count (0 = just started)
+     */
+    public int getInfantryCombatTurnCount() {
+        return infantryCombatTurnCount;
+    }
+
+    /**
+     * Set the number of turns in infantry combat.
+     *
+     * @param turnCount the turn count
+     */
+    public void setInfantryCombatTurnCount(int turnCount) {
+        infantryCombatTurnCount = turnCount;
+    }
+
+    /**
+     * Increment the infantry combat turn counter.
+     */
+    public void incrementInfantryCombatTurnCount() {
+        infantryCombatTurnCount++;
+    }
+
+    /**
+     * Check if this entity wants to withdraw from infantry combat.
+     *
+     * @return true if withdrawal requested
+     */
+    public boolean isInfantryCombatWantsWithdrawal() {
+        return infantryCombatWantsWithdrawal;
+    }
+
+    /**
+     * Set whether this entity wants to withdraw from infantry combat.
+     *
+     * @param wantsWithdrawal true to request withdrawal
+     */
+    public void setInfantryCombatWantsWithdrawal(boolean wantsWithdrawal) {
+        infantryCombatWantsWithdrawal = wantsWithdrawal;
+    }
+
+    /**
+     * Clear all infantry combat state (called when combat ends).
+     */
+    public void clearInfantryCombatState() {
+        infantryCombatTargetId = Entity.NONE;
+        infantryCombatIsAttacker = false;
+        infantryCombatTurnCount = 0;
+        infantryCombatWantsWithdrawal = false;
+    }
+
+    /**
      * Scans through the ammo on the unit for any inferno rounds.
      *
      * @return <code>true</code> if the unit is still loaded with Inferno
@@ -10057,6 +10296,27 @@ public abstract class Entity extends TurnOrdered
 
     public void setClearingMinefield(boolean clearingMinefield) {
         this.clearingMinefield = clearingMinefield;
+    }
+
+    /**
+     * Returns true if this entity is currently clearing woods with a saw.
+     *
+     * <p>When clearing woods, weapon attacks are penalized as though the unit were
+     * moving at running/flank speed (TM pp.241-243).</p>
+     *
+     * @return true if the entity is clearing woods
+     */
+    public boolean isClearingWoods() {
+        return clearingWoods;
+    }
+
+    /**
+     * Sets whether this entity is currently clearing woods with a saw.
+     *
+     * @param clearingWoods true if clearing woods
+     */
+    public void setClearingWoods(boolean clearingWoods) {
+        this.clearingWoods = clearingWoods;
     }
 
     /**
@@ -10580,7 +10840,17 @@ public abstract class Entity extends TurnOrdered
 
         // Hidden units are always eligible for PRE phases
         if (phase.isPremovement() || phase.isPreFiring()) {
-            return isHidden();
+            if (isHidden()) {
+                return true;
+            }
+            // Standard ghost target mode: entities with ghost target equipment
+            // are eligible during PRE_FIRING to assign targets
+            if (phase.isPreFiring() && hasGhostTargetEquipment()
+                  && (game != null)
+                  && game.usesStandardGhostTargetMode()) {
+                return true;
+            }
+            return false;
         }
 
         // Hidden units shouldn't be counted for turn order, unless deploying or firing (spotting)
@@ -10594,6 +10864,8 @@ public abstract class Entity extends TurnOrdered
             case PHYSICAL -> isEligibleForPhysical();
             case TARGETING -> isEligibleForTargetingPhase();
             case OFFBOARD -> isEligibleForOffboard();
+            case PREEND_DECLARATIONS -> isEligibleForPreEndDeclarations();
+            case INFANTRY_VS_INFANTRY_COMBAT -> isEligibleForInfantryVsInfantry();
             default -> true;
         };
     }
@@ -10762,7 +11034,9 @@ public abstract class Entity extends TurnOrdered
                 return false;
             }
 
-            return hex.containsTerrain(Terrains.BUILDING);
+            // Check if can lay demolition charges
+            return hex.containsTerrain(Terrains.BUILDING) && hasWorkingMisc(MiscTypeFlag.F_TOOLS,
+                  MiscTypeFlag.S_DEMOLITION_CHARGE);
         }
 
         // only Meks and ProtoMek's have physical attacks (except tank charges)
@@ -10868,7 +11142,75 @@ public abstract class Entity extends TurnOrdered
 
         } // Check the next building
 
+        // Check if the entity can clear woods with a saw (chainsaw or dual saw)
+        if (!canHit && position != null && WoodsClearingAttackAction.hasWorkingSaw(this)) {
+            // Own hex is always in arc
+            Hex ownHex = game.getHex(position, boardId);
+            if (ownHex != null && (ownHex.containsTerrain(Terrains.WOODS) || ownHex.containsTerrain(Terrains.JUNGLE))) {
+                canHit = true;
+            }
+            // Adjacent hexes must be in the saw's attack arc
+            if (!canHit) {
+                for (int dir = 0; dir < 6; dir++) {
+                    Coords adj = position.translated(dir);
+                    Hex adjHex = game.getBoard(boardId).getHex(adj);
+                    if (adjHex != null && (adjHex.containsTerrain(Terrains.WOODS)
+                          || adjHex.containsTerrain(Terrains.JUNGLE))
+                          && WoodsClearingAttackAction.isInSawArc(this, adj)) {
+                        canHit = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         return canHit;
+    }
+
+    /**
+     * Determines if this entity can be boarded by infantry for interior combat. Used for TO:AR p. 167 Infantry vs
+     * Infantry combat eligibility as a target for initiation. This will eventually include dropships, large naval
+     * vessels, and other boardable entities.
+     *
+     * @return true if infantry can board this entity to initiate interior combat
+     */
+    public boolean isBoardable() {
+        return false;
+    }
+
+    /**
+     * Determines if this entity can initiate infantry vs infantry combat. Default implementation returns false.
+     * Infantry units override this.
+     *
+     * @return true if this entity can initiate infantry vs infantry combat
+     */
+    public boolean canInitiateInfantryVsInfantryCombat() {
+        return false;
+    }
+
+    /**
+     * Determines if this entity can reinforce ongoing infantry vs infantry combat. Default implementation returns
+     * false. Infantry units override this.
+     *
+     * @return true if this entity can reinforce infantry vs infantry combat
+     */
+    public boolean canReinforceInfantryVsInfantry() {
+        return false;
+    }
+
+    /**
+     * Check if the entity can initiate NEW infantry vs. infantry combat. This is for the PREEND_DECLARATIONS phase.
+     */
+    public boolean isEligibleForPreEndDeclarations() {
+        return canInitiateInfantryVsInfantryCombat();
+    }
+
+    /**
+     * Check if the entity can participate in ONGOING infantry vs. infantry combat. This is for the
+     * INFANTRY_VS_INFANTRY_COMBAT phase.
+     */
+    public boolean isEligibleForInfantryVsInfantry() {
+        return canReinforceInfantryVsInfantry();
     }
 
     /**
@@ -11129,6 +11471,14 @@ public abstract class Entity extends TurnOrdered
             setSearchlightState(false);
         }
 
+    }
+
+    public void setSearchlightOverride(boolean arg) {
+        searchlightOverride = arg;
+    }
+
+    public boolean getSearchlightOverride() {
+        return searchlightOverride;
     }
 
     public void setSearchlightState(boolean arg) {
@@ -11731,14 +12081,14 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Checks if a neural interface system is active based on implant and hardware requirements.
-     * When tracking neural interface hardware, requires both implant and hardware.
-     * When not tracking, implant alone is sufficient.
+     * Checks if a neural interface system is active based on implant and hardware requirements. When tracking neural
+     * interface hardware, requires both implant and hardware. When not tracking, implant alone is sufficient.
      *
      * <p>This is a shared helper for DNI and EI systems which follow the same pattern.</p>
      *
-     * @param hasImplant whether the pilot has the required implant
+     * @param hasImplant  whether the pilot has the required implant
      * @param hasHardware whether the unit has the required hardware
+     *
      * @return true if the neural interface is considered active
      */
     private boolean isNeuralInterfaceActive(boolean hasImplant, boolean hasHardware) {
@@ -11754,33 +12104,18 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Returns whether this unit has an active Enhanced Imaging (EI) cockpit system. EI cockpit is always required (it's
-     * built into the unit at construction). When the "Track Neural Interface Hardware" option is enabled, the pilot
-     * must also have the EI implant. When tracking is disabled, only the cockpit is required (original behavior).
-     *
-     * <p>Note: EI has inverted requirements compared to DNI:</p>
-     * <ul>
-     *   <li>DNI: Implant always required, hardware conditional on tracking</li>
-     *   <li>EI: Hardware (cockpit) always required, implant conditional on tracking</li>
-     * </ul>
+     * Returns whether this unit has an active Enhanced Imaging (EI) cockpit system. The EI implant is the primary
+     * requirement (same pattern as DNI via {@link #isNeuralInterfaceActive}). When tracking hardware is disabled
+     * (default), the implant alone provides EI benefits. When tracking is enabled, the unit must also have EI cockpit
+     * equipment that is not shut down.
      *
      * @return true if the unit has an active EI cockpit system
      */
     public boolean hasActiveEiCockpit() {
-        // EI cockpit is always required (it's built into the unit)
-        if (!hasEiCockpit()) {
-            return false;
-        }
-
-        // When tracking hardware, also require EI implant on pilot
-        if ((game != null) && gameOptions().booleanOption(OptionsConstants.ADVANCED_TRACK_NEURAL_INTERFACE_HARDWARE)) {
-            if (!hasAbility(OptionsConstants.MD_EI_IMPLANT)) {
-                return false;
-            }
-        }
-
-        // EI-specific: check if interface is in "Off" mode
-        return !isEiShutdown();
+        return isNeuralInterfaceActive(
+              hasAbility(OptionsConstants.MD_EI_IMPLANT),
+              hasEiCockpit() && !isEiShutdown()
+        );
     }
 
     /**
@@ -11796,8 +12131,8 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Sets the EI shutdown state by changing the EI Interface equipment mode. ProtoMeks and units with MDI cannot
-     * shut down EI. Per IO p.69, EI can be voluntarily shut down during the End Phase.
+     * Sets the EI shutdown state by changing the EI Interface equipment mode. ProtoMeks and units with MDI cannot shut
+     * down EI. Per IO p.69, EI can be voluntarily shut down during the End Phase.
      *
      * @param shutdown true to shut down EI (set to "Off" mode), false to activate it (set to "On" mode)
      */
@@ -12959,6 +13294,16 @@ public abstract class Entity extends TurnOrdered
 
                 misc.getType().setModes(modes.toArray(stringArray));
             }
+
+            // Vehicle Cockpit Command Console: add Ghost Targets mode when option is enabled
+            if (misc.getType().hasFlag(MiscType.F_COMMAND_CONSOLE)
+                  && gameOpts.booleanOption(OptionsConstants.ADVANCED_TAC_OPS_GHOST_TARGET)) {
+                ArrayList<String> modes = new ArrayList<>();
+                modes.add("Default");
+                modes.add("Ghost Targets");
+                misc.getType().setModes(modes.toArray(new String[0]));
+                misc.getType().setInstantModeSwitch(false);
+            }
         }
     }
 
@@ -13162,6 +13507,40 @@ public abstract class Entity extends TurnOrdered
 
     public int getGhostTargetOverride() {
         return ghostTargetOverride;
+    }
+
+    /**
+     * @return the accumulated to-hit bonus for attacks AGAINST this unit from friendly ghost targets (Standard mode
+     *       only, per TO:AR)
+     */
+    public int getGhostTargetDefensiveBonus() {
+        return ghostTargetDefensiveBonus;
+    }
+
+    /**
+     * @return the accumulated to-hit bonus for attacks BY this unit from enemy ghost targets (Standard mode only, per
+     *       TO:AR)
+     */
+    public int getGhostTargetOffensiveBonus() {
+        return ghostTargetOffensiveBonus;
+    }
+
+    /**
+     * Increment the defensive ghost target bonus (attacks against this unit are harder). Capped at +3 per TO:AR rules.
+     *
+     * @param amount the amount to add (typically +1 per successful ghost target roll)
+     */
+    public void addGhostTargetDefensiveBonus(int amount) {
+        ghostTargetDefensiveBonus = Math.min(3, ghostTargetDefensiveBonus + amount);
+    }
+
+    /**
+     * Increment the offensive ghost target bonus (attacks by this unit are harder). Capped at +3 per TO:AR rules.
+     *
+     * @param amount the amount to add (typically +1 per successful ghost target roll)
+     */
+    public void addGhostTargetOffensiveBonus(int amount) {
+        ghostTargetOffensiveBonus = Math.min(3, ghostTargetOffensiveBonus + amount);
     }
 
     public int getCoolantFailureAmount() {
@@ -13623,6 +14002,22 @@ public abstract class Entity extends TurnOrdered
         return (source != null) ? source : "";
     }
 
+    /**
+     * Sets the tech faction for this entity.
+     *
+     * @param faction The faction to set, or Faction.NONE for no faction
+     */
+    public void setTechFaction(Faction faction) {
+        this.techFaction = (faction != null) ? faction : Faction.NONE;
+    }
+
+    /**
+     * @return The tech faction for this entity, or Faction.NONE if not set.
+     */
+    public Faction getTechFaction() {
+        return techFaction;
+    }
+
     public synchronized void setQuirks(Quirks quirks) {
         this.quirks = quirks;
     }
@@ -13683,8 +14078,8 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Gets the obsolete quirk value as a raw string.
-     * Format is comma-separated years: "obsoleteYear,reintroYear,obsoleteYear2,reintroYear2,..."
+     * Gets the obsolete quirk value as a raw string. Format is comma-separated years:
+     * "obsoleteYear,reintroYear,obsoleteYear2,reintroYear2,..."
      *
      * @return The raw obsolete quirk string, or empty string if not set
      */
@@ -13701,8 +14096,8 @@ public abstract class Entity extends TurnOrdered
     public static final String OBSOLETE_UNKNOWN_MARKER = "unknown";
 
     /**
-     * Parses the obsolete quirk value into a list of years.
-     * Format: "obsoleteYear,reintroYear,obsoleteYear2,..." where pairs define obsolete periods.
+     * Parses the obsolete quirk value into a list of years. Format: "obsoleteYear,reintroYear,obsoleteYear2,..." where
+     * pairs define obsolete periods.
      *
      * @return List of years parsed from the obsolete quirk, empty list if not set or if set to "unknown"
      */
@@ -13736,8 +14131,8 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Gets the first year when production of this obsolete unit ceased.
-     * Kept for backward compatibility - use isObsoleteInYear() for full cycle support.
+     * Gets the first year when production of this obsolete unit ceased. Kept for backward compatibility - use
+     * isObsoleteInYear() for full cycle support.
      *
      * @return The first year production ceased, or 0 if the unit doesn't have the Obsolete quirk
      */
@@ -13812,10 +14207,11 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Calculates the repair/parts target number modifier for an obsolete unit.
-     * Per the rules: +1 TN per 15 years after production ceased, maximum +5.
+     * Calculates the repair/parts target number modifier for an obsolete unit. Per the rules: +1 TN per 15 years after
+     * production ceased, maximum +5.
      *
      * @param gameYear The current game year
+     *
      * @return The TN modifier (0 to +5), or 0 if not obsolete
      */
     public int getObsoleteRepairModifier(int gameYear) {
@@ -13829,10 +14225,11 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * Calculates the resale price modifier for an obsolete unit.
-     * Per the rules: -10% per 20 years after production ceased, minimum 50%.
+     * Calculates the resale price modifier for an obsolete unit. Per the rules: -10% per 20 years after production
+     * ceased, minimum 50%.
      *
      * @param gameYear The current game year
+     *
      * @return The resale multiplier (0.5 to 1.0), or 1.0 if not obsolete
      */
     public double getObsoleteResaleModifier(int gameYear) {
@@ -14322,7 +14719,9 @@ public abstract class Entity extends TurnOrdered
     }
 
     /**
-     * @return True if this unit has patchwork armor.
+     * @return True if this unit has patchwork armor. Note that this is checked by comparing actual armor types (and
+     *       tech level) across the locations - in other words, it is *not* a simple boolean flag; instead, the result
+     *       will always correspond to the unit's armoring.
      */
     public boolean hasPatchworkArmor() {
         int type = armorType[0];
@@ -15356,6 +15755,8 @@ public abstract class Entity extends TurnOrdered
             if (this instanceof Tank) {
                 setCarcass(true);
                 ((Tank) this).immobilize();
+            } else if (this instanceof AbstractBuildingEntity) {
+                setCarcass(true);
             } else {
                 setDestroyed(true);
             }
@@ -15834,7 +16235,13 @@ public abstract class Entity extends TurnOrdered
     }
 
     public void setStructuralTechRating(int structuralTechRating) {
-        this.structuralTechRating = TechRating.fromIndex(structuralTechRating);
+        if (TechRating.isValidIndex(structuralTechRating)) {
+            this.structuralTechRating = TechRating.fromIndex(structuralTechRating);
+        } else {
+            LOGGER.warn("Invalid structural TechRating index {} for {} {}, defaulting to C",
+                  structuralTechRating, getChassis(), getModel());
+            this.structuralTechRating = TechRating.C;
+        }
     }
 
     /**
@@ -15863,7 +16270,13 @@ public abstract class Entity extends TurnOrdered
     }
 
     public void setArmorTechRating(int armorTechRating) {
-        this.armorTechRating = TechRating.fromIndex(armorTechRating);
+        if (TechRating.isValidIndex(armorTechRating)) {
+            this.armorTechRating = TechRating.fromIndex(armorTechRating);
+        } else {
+            LOGGER.warn("Invalid armor TechRating index {} for {} {}, defaulting to C",
+                  armorTechRating, getChassis(), getModel());
+            this.armorTechRating = TechRating.C;
+        }
     }
 
     public TechRating getEngineTechRating() {
@@ -15878,7 +16291,13 @@ public abstract class Entity extends TurnOrdered
     }
 
     public void setEngineTechRating(int engineTechRating) {
-        this.engineTechRating = TechRating.fromIndex(engineTechRating);
+        if (TechRating.isValidIndex(engineTechRating)) {
+            this.engineTechRating = TechRating.fromIndex(engineTechRating);
+        } else {
+            LOGGER.warn("Invalid engine TechRating index {} for {} {}, defaulting to C",
+                  engineTechRating, getChassis(), getModel());
+            this.engineTechRating = TechRating.C;
+        }
     }
 
     /**

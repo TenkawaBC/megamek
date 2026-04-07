@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2000-2005 Ben Mazur (bmazur@sev.org)
- * Copyright (C) 2002-2025 The MegaMek Team. All Rights Reserved.
+ * Copyright (C) 2002-2026 The MegaMek Team. All Rights Reserved.
  *
  * This file is part of MegaMek.
  *
@@ -430,7 +430,7 @@ public class MiscType extends EquipmentType {
                 return String.format(" (%d kg)", (int) size);
             } else if (shortName) {
                 // Don't show decimal when not required
-                return String.format(":%st", NumberFormat.getInstance().format(size));
+                return String.format(": %st", NumberFormat.getInstance().format(size));
             } else {
                 return String.format(" (%s %s)",
                       NumberFormat.getInstance().format(size),
@@ -2295,7 +2295,7 @@ public class MiscType extends EquipmentType {
         // Tech Progression tweaked to combine IntOps with TRO Prototypes/3145 NTNU RS
         misc.techAdvancement.setTechBase(TechBase.ALL)
               .setISAdvancement(DATE_NONE, 3066, 3084, DATE_NONE, DATE_NONE)
-              .setISApproximate(false, false, true, false, false)
+              .setISApproximate(false, true, true, false, false)
               .setClanAdvancement(DATE_NONE, 3061, 3084, DATE_NONE, DATE_NONE)
               .setClanApproximate(false, false, true, false, false)
               .setPrototypeFactions(Faction.CGS)
@@ -2469,7 +2469,7 @@ public class MiscType extends EquipmentType {
         misc.addLookupName("Clan Modular Armor");
         misc.tonnage = 1;
         misc.criticalSlots = 1;
-        misc.cost = 100000;
+        misc.cost = 10000;
         misc.flags = misc.flags.or(F_MODULAR_ARMOR,
               F_MEK_EQUIPMENT,
               F_TANK_EQUIPMENT,
@@ -3892,7 +3892,7 @@ public class MiscType extends EquipmentType {
         String[] modes = { "retracted", "extended" };
         misc.setModes(modes);
         misc.rulesRefs = "236, TM";
-        misc.techAdvancement.setTechBase(TechBase.ALL)
+        misc.techAdvancement.setTechBase(TechBase.IS)
               .setIntroLevel(false)
               .setUnofficial(false)
               .setTechRating(TechRating.B)
@@ -4714,8 +4714,7 @@ public class MiscType extends EquipmentType {
     public static MiscType createDNICockpitModification() {
         MiscType misc = new MiscType();
         misc.name = "Direct Neural Interface Cockpit Modification";
-        misc.setInternalName("DNICockpitModification");
-
+        misc.setInternalName(EquipmentTypeLookup.DNI_COCKPIT_MOD);
         misc.tonnage = 0;
         misc.criticalSlots = 0;
         misc.cost = 250000;
@@ -5921,7 +5920,7 @@ public class MiscType extends EquipmentType {
 
     /**
      * Creates the Enhanced Imaging (EI) Interface equipment. This is the unit-side equipment that allows a pilot with
-     * an EI Implant to use Enhanced Imaging capabilities. ProtoMeks have this built-in. See IO p.77 for rules.
+     * an EI Implant to use Enhanced Imaging capabilities. ProtoMeks have this built-in. See IO:AE p.69 for rules.
      *
      * @return the EI Interface equipment
      */
@@ -5929,7 +5928,7 @@ public class MiscType extends EquipmentType {
         MiscType misc = new MiscType();
 
         misc.name = "Enhanced Imaging (EI) Interface";
-        misc.setInternalName("EIInterface");
+        misc.setInternalName(EquipmentTypeLookup.EI_INTERFACE);
         misc.addLookupName("EI Interface");
         misc.addLookupName("Enhanced Imaging Interface");
         misc.tonnage = 0;
@@ -8401,6 +8400,7 @@ public class MiscType extends EquipmentType {
                     F_JS_EQUIPMENT,
                     F_WS_EQUIPMENT,
                     F_SS_EQUIPMENT,
+                    F_SC_EQUIPMENT,
                     F_MASH)
               .andNot(F_FIGHTER_EQUIPMENT);
         misc.industrial = true;
@@ -9863,7 +9863,7 @@ public class MiscType extends EquipmentType {
         misc.rulesRefs = "122, TM";
 
         misc.techAdvancement.setTechBase(TechBase.ALL);
-        misc.techAdvancement.setISAdvancement(DATE_NONE, DATE_NONE, DATE_PS);
+        misc.techAdvancement.setAdvancement(DATE_NONE, DATE_NONE, DATE_PS);
         misc.techAdvancement.setTechRating(TechRating.B);
         misc.techAdvancement.setAvailability(AvailabilityValue.B,
               AvailabilityValue.C,
@@ -10372,8 +10372,8 @@ public class MiscType extends EquipmentType {
               .setUnofficial(false)
               .setTechRating(TechRating.F)
               .setAvailability(AvailabilityValue.X, AvailabilityValue.X, AvailabilityValue.F, AvailabilityValue.E)
-              .setISAdvancement(3059, DATE_NONE, 3089, DATE_NONE, DATE_NONE)
-              .setISApproximate(false, false, true, false, false)
+              .setClanAdvancement(3059, DATE_NONE, 3089, DATE_NONE, DATE_NONE)
+              .setClanApproximate(false, false, true, false, false)
               .setPrototypeFactions(Faction.CNC)
               .setProductionFactions(Faction.CNC)
               .setStaticTechLevel(SimpleTechLevel.STANDARD);
@@ -11175,7 +11175,7 @@ public class MiscType extends EquipmentType {
         MiscType misc = new MiscType();
 
         misc.name = "BA Manipulator Adaptation [Modular Equipment Adaptor]";
-        misc.setInternalName("BAMEA");
+        misc.setInternalName(EquipmentTypeLookup.BA_MODULAR_EQUIPMENT_ADAPTOR);
         misc.shortName = "Modular Equipment Adaptor";
         misc.tonnage = 0.01;
         misc.criticalSlots = 2;
@@ -11523,10 +11523,9 @@ public class MiscType extends EquipmentType {
         MiscType misc = new MiscType();
 
         misc.name = "Anti-Personnel Weapon Mount";
-        misc.setInternalName("BAAPMount");
+        misc.setInternalName(EquipmentTypeLookup.BA_APM);
         misc.tonnage = 0.005;
         misc.criticalSlots = 1;
-        misc.hittable = false;
         misc.flags = misc.flags.or(F_BA_EQUIPMENT, F_AP_MOUNT);
         misc.bv = 0;
         misc.rulesRefs = "271, TM";
@@ -11574,8 +11573,7 @@ public class MiscType extends EquipmentType {
         return misc;
     }
 
-    // TODO - IO pg 52 - Battle Armor Detachable Missile Pack should really be a
-    // piece of equipment.
+    // TODO - IO pg 52 - Battle Armor Detachable Missile Pack should really be a piece of equipment.
 
     public static MiscType createISDetachableWeaponPack() {
         MiscType misc = new MiscType();
@@ -11583,13 +11581,10 @@ public class MiscType extends EquipmentType {
         misc.name = "Detachable Weapon Pack";
         misc.setInternalName(EquipmentTypeLookup.BA_DWP);
         misc.addLookupName("CLDetachableWeaponPack");
-        misc.tonnage = 0;
+        misc.shortName = "DWP";
         misc.criticalSlots = 1;
         misc.cost = 18000;
-        misc.flags = misc.flags.or(F_BA_EQUIPMENT, F_DETACHABLE_WEAPON_PACK)
-              .andNot(F_MEK_EQUIPMENT)
-              .andNot(F_TANK_EQUIPMENT)
-              .andNot(F_FIGHTER_EQUIPMENT);
+        misc.flags = misc.flags.or(F_BA_EQUIPMENT, F_DETACHABLE_WEAPON_PACK);
         misc.rulesRefs = "99, TO:AUE";
         // Tech Progression tweaked to combine IntOps with TRO Prototypes/3145 NTNU RS
         misc.techAdvancement.setTechBase(TechBase.ALL)
@@ -11607,8 +11602,7 @@ public class MiscType extends EquipmentType {
         return misc;
     }
 
-    // TODO - IO pg 52 - Squad Support Weapon Mod (SSW) should be a piece of
-    // equipment
+    // TODO - IO pg 52 - Squad Support Weapon Mod (SSW) should be a piece of equipment
 
     public static MiscType createISBAMineDispenser() {
         MiscType misc = new MiscType();
@@ -11733,7 +11727,7 @@ public class MiscType extends EquipmentType {
         // Going to assume this is something with building Bridges
         // Also the equipment used by infantry bridge builders.
         misc.techAdvancement.setTechBase(TechBase.ALL);
-        misc.techAdvancement.setISAdvancement(DATE_NONE, 2720, DATE_NONE);
+        misc.techAdvancement.setAdvancement(DATE_NONE, 2720, DATE_NONE);
         misc.techAdvancement.setTechRating(TechRating.D);
         misc.techAdvancement.setAvailability(AvailabilityValue.D,
               AvailabilityValue.D,

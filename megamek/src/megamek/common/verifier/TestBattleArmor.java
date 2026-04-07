@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2000-2005 Ben Mazur (bmazur@sev.org)
- * Copyright (C) 2013-2025 The MegaMek Team. All Rights Reserved.
+ * Copyright (C) 2013-2026 The MegaMek Team. All Rights Reserved.
  *
  * This file is part of MegaMek.
  *
@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Vector;
 
 import megamek.common.TechConstants;
@@ -116,6 +117,7 @@ public class TestBattleArmor extends TestEntity {
 
     /**
      * An enumeration that keeps track of the legal manipulators for BattleArmor.
+     * TM p.166
      *
      * @author arlith
      */
@@ -148,15 +150,15 @@ public class TestBattleArmor extends TestEntity {
         public final String displayName;
 
         /**
-         * Denotes whether this armor is Clan or not.
+         * When true, this manipulator type needs to be mounted in both arms to be valid.
          */
         public final boolean pairMounted;
 
-        BAManipulator(int t, boolean p) {
-            type = t;
-            internalName = BattleArmor.MANIPULATOR_TYPE_STRINGS[t];
-            displayName = BattleArmor.MANIPULATOR_NAME_STRINGS[t];
-            pairMounted = p;
+        BAManipulator(int type, boolean pairMounted) {
+            this.type = type;
+            internalName = BattleArmor.MANIPULATOR_TYPE_STRINGS[type];
+            displayName = BattleArmor.MANIPULATOR_NAME_STRINGS[type];
+            this.pairMounted = pairMounted;
         }
 
         /**
@@ -176,6 +178,10 @@ public class TestBattleArmor extends TestEntity {
                 }
             }
             return null;
+        }
+
+        public MiscType miscType() {
+            return (MiscType) EquipmentType.get(internalName);
         }
     }
 
@@ -794,6 +800,11 @@ public class TestBattleArmor extends TestEntity {
                 }
             }
 
+            if (m.isDWPMounted() && (m.getLinkedBy() == null || !m.getLinkedBy().is(EquipmentTypeLookup.BA_DWP))) {
+                buff.append("Missing or incorrect link to a DWP for %s!\n".formatted(m.getName()));
+                correct = false;
+            }
+
             // Ensure that jump boosters are mounted in the body
             if ((m instanceof MiscMounted) && m.getType().hasFlag(MiscType.F_JUMP_BOOSTER)
                   && (m.getBaMountLoc() != BattleArmor.MOUNT_LOC_BODY)) {
@@ -920,8 +931,7 @@ public class TestBattleArmor extends TestEntity {
         return correct;
     }
 
-    public void getUnallocatedEquipment(Entity entity,
-          Vector<Mounted<?>> unallocated) {
+    public void getUnallocatedEquipment(Entity entity, Vector<Mounted<?>> unallocated) {
         for (Mounted<?> m : entity.getEquipment()) {
             if (m.getBaMountLoc() == BattleArmor.MOUNT_LOC_NONE) {
                 // OS-launcher ammo doesn't take up a slot
@@ -1002,14 +1012,19 @@ public class TestBattleArmor extends TestEntity {
 
         if (laManipType != null && raManipType != null) {
             if ((laManipType.pairMounted || raManipType.pairMounted) && (laManipType.type != raManipType.type)) {
-                if (laManipType.pairMounted) {
-                    buff.append(
-                          "Left Arm manipulator must be mounted as a pair, but the right arm manipulator doesn't match! ");
-                } else {
-                    buff.append(
-                          "Right Arm manipulator must be mounted as a pair, but the left arm manipulator doesn't match! ");
-                }
+                buff.append("Mismatch of pair-mounted manipulators!");
+                correct = false;
+            }
+        }
 
+        if ((laManipType != null && laManipType.pairMounted) || (raManipType != null && raManipType.pairMounted)) {
+            boolean laModularAdaptor = ba.hasMiscInMountLocation(EquipmentTypeLookup.BA_MODULAR_EQUIPMENT_ADAPTOR,
+                  BattleArmor.MOUNT_LOC_LEFT_ARM);
+            boolean raModularAdaptor = ba.hasMiscInMountLocation(EquipmentTypeLookup.BA_MODULAR_EQUIPMENT_ADAPTOR,
+                  BattleArmor.MOUNT_LOC_RIGHT_ARM);
+            // XOR = exactly one of them present
+            if (laModularAdaptor ^ raModularAdaptor) {
+                buff.append("Cannot combine a single Modular Equipment Adaptor with a pair-mounted manipulator!");
                 correct = false;
             }
         }
@@ -1018,18 +1033,18 @@ public class TestBattleArmor extends TestEntity {
     }
 
     @Override
-    public boolean correctWeight(StringBuffer buff, boolean showO, boolean showU) {
+    public boolean correctWeight(StringBuffer buff, boolean ignoreOverweight, boolean ignoreUnderweight) {
         double weightSum = calculateWeight();
         double weight = getWeight();
         boolean correct = true;
         String baDesignation = ba.getLocationAbbr(BattleArmor.LOC_SQUAD);
-        if (showO && ((weight + getMaxOverweight()) < weightSum)) {
+        if (!ignoreOverweight && ((weight + getMaxOverweight()) < weightSum)) {
             buff.append(baDesignation).append("Weight: ").append(calculateWeight())
                   .append(" is greater than ").append(getWeight())
                   .append("\n");
             correct = false;
         }
-        if (showU && ((weight - getMinUnderweight()) > weightSum)) {
+        if (!ignoreUnderweight && ((weight - getMinUnderweight()) > weightSum)) {
             buff.append("Weight: ").append(calculateWeight())
                   .append(" is less than ").append(getWeight()).append("\n");
             correct = false;
@@ -1119,7 +1134,7 @@ public class TestBattleArmor extends TestEntity {
         buff.append("Intro year: ").append(ba.getYear()).append("\n");
         buff.append(printSource());
         buff.append(printShortMovement());
-        if (correctWeight(buff, true, true)) {
+        if (correctWeight(buff, false, false)) {
             buff.append("Weight: ").append(getWeight() * 1000).append(" kg (")
                   .append(calculateWeight() * 1000).append(" kg)\n");
         }
@@ -1301,7 +1316,7 @@ public class TestBattleArmor extends TestEntity {
     }
 
     @Override
-    public boolean hasIllegalEquipmentCombinations(StringBuffer buff) {
+    public boolean hasIllegalEquipmentCombinations(@Nullable StringBuffer errors) {
         BattleArmor battleArmor = (BattleArmor) getEntity();
         Map<String, Integer> equipmentCount = new HashMap<>();
         List<String> currentErrors = new ArrayList<>();
@@ -1351,11 +1366,23 @@ public class TestBattleArmor extends TestEntity {
                     currentErrors.add("Quad BattleArmor cannot use a Standard Modular Weapon Mount");
                 }
 
-                // CHECKSTYLE IGNORE ForbiddenWords FOR 4 LINES
-                // IO p.110: BattleMech NIU can only be mounted in PA(L)-type battlesuit
+                // IO p.110: Mek NIU can only be mounted in PA(L)-type battlesuit
                 if (misc.hasFlag(MiscType.F_BATTLEMEK_NIU)
                       && battleArmor.getWeightClass() != EntityWeightClass.WEIGHT_ULTRA_LIGHT) {
-                    currentErrors.add("BattleMech Neural Interface Unit can only be mounted in PA(L) battlesuits");
+                    currentErrors.add("BattleMek Neural Interface Unit can only be mounted in PA(L) battlesuits");
+                }
+
+                if (mount.is(EquipmentTypeLookup.BA_DWP)) {
+                    if (mount.getLinked() == null) {
+                        currentErrors.add("Detachable Weapon Packs must mount a weapon!");
+                    } else if (!mount.getLinked().getType().canBeMountedOnBaDwp()) {
+                        currentErrors.add("Illegal equipment %s in Detachable Weapon Pack!"
+                              .formatted(mount.getLinked().getName()));
+                    }
+
+                    if (mount.getLinkedBy() != null) {
+                        currentErrors.add("Detachable Weapon Packs cannot be mounted on other equipment!");
+                    }
                 }
             }
         }
@@ -1376,9 +1403,10 @@ public class TestBattleArmor extends TestEntity {
             }
         }
 
-        if (!currentErrors.isEmpty()) {
-            buff.append(String.join("\n", currentErrors)).append("\n");
+        if (!currentErrors.isEmpty() && (errors != null)) {
+            errors.append(String.join("\n", currentErrors)).append("\n");
         }
-        return (!currentErrors.isEmpty()) || super.hasIllegalEquipmentCombinations(buff);
+        return (!currentErrors.isEmpty())
+              || super.hasIllegalEquipmentCombinations(Objects.requireNonNullElse(errors, new StringBuffer()));
     }
 }

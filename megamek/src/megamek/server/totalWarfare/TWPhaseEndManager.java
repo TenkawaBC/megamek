@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 The MegaMek Team. All Rights Reserved.
+ * Copyright (C) 2024-2026 The MegaMek Team. All Rights Reserved.
  *
  * This file is part of MegaMek.
  *
@@ -133,15 +133,24 @@ record TWPhaseEndManager(TWGameManager gameManager) {
                 gameManager.changePhase(GamePhase.OFFBOARD);
                 break;
             case PRE_FIRING:
+                // Resolve Standard ghost targets before transitioning to FIRING,
+                // so bonuses are active during attack declaration (RAW: "at the start of every Weapon Attack Phase")
+                if (isStandardGhostTargetMode()) {
+                    gameManager.resolveStandardGhostTargets();
+                }
                 gameManager.changePhase(GamePhase.FIRING);
                 break;
             case FIRING:
                 // write Weapon Attack Phase header
                 gameManager.addReport(new Report(3000, Report.PUBLIC));
+                // Add ghost target reports (resolved during PRE_FIRING, displayed here)
+                gameManager.addGhostTargetReports();
                 gameManager.resolveWhatPlayersCanSeeWhatUnits();
                 gameManager.resolveAllButWeaponAttacks();
                 gameManager.resolveSelfDestruction();
-                gameManager.reportGhostTargetRolls();
+                if (!isStandardGhostTargetMode()) {
+                    gameManager.reportGhostTargetRolls();
+                }
                 gameManager.reportLargeCraftECCMRolls();
                 gameManager.resolveOnlyWeaponAttacks();
                 gameManager.assignAMS();
@@ -175,6 +184,9 @@ record TWPhaseEndManager(TWGameManager gameManager) {
             case PHYSICAL:
                 gameManager.resolveWhatPlayersCanSeeWhatUnits();
                 gameManager.resolvePhysicalAttacks();
+                // Process woods clearing completions after all declarations are resolved.
+                // Per TW p.112, terrain converts immediately when threshold is met.
+                gameManager.processWoodsClearingCompletions();
                 gameManager.resolveBoobyTraps(); // booby trap says it resolves "immediately"... could be problematic
                 gameManager.applyBuildingDamage();
                 gameManager.checkForPSRFromDamage();
@@ -192,11 +204,21 @@ record TWPhaseEndManager(TWGameManager gameManager) {
                     gameManager.addReport(new Report(1205, Report.PUBLIC));
                     gameManager.getGame().addReports(gameManager.getMainPhaseReport());
                     gameManager.sendReport();
-                    gameManager.changePhase(GamePhase.END);
+                    gameManager.changePhase(GamePhase.PREEND_DECLARATIONS);
                 }
                 gameManager.sendGroundObjectUpdate();
                 break;
             case PHYSICAL_REPORT:
+                gameManager.changePhase(GamePhase.PREEND_DECLARATIONS);
+                break;
+            case PREEND_DECLARATIONS:
+                // Actions already added during player turns
+                // No processing needed here - just transition
+                gameManager.changePhase(GamePhase.INFANTRY_VS_INFANTRY_COMBAT);
+                break;
+            case INFANTRY_VS_INFANTRY_COMBAT:
+                // Actions already added during player turns
+                // No processing needed here - just transition
                 gameManager.changePhase(GamePhase.END);
                 break;
             case TARGETING:
@@ -323,5 +345,9 @@ record TWPhaseEndManager(TWGameManager gameManager) {
                 ent.setHiddenActivationPhase(GamePhase.UNKNOWN);
             }
         }
+    }
+
+    private boolean isStandardGhostTargetMode() {
+        return gameManager.getGame().usesStandardGhostTargetMode();
     }
 }

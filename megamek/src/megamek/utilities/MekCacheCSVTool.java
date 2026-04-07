@@ -2,7 +2,7 @@
   Copyright (C) 2000-2004 Ben Mazur (bmazur@sev.org)
  * Copyright © 2013 Edward Cullen (eddy@obsessedcomputers.co.uk)
  * Copyright © 2013 Nicholas Walczak (walczak@cs.umn.edu)
- * Copyright (C) 2013-2025 The MegaMek Team. All Rights Reserved.
+ * Copyright (C) 2013-2026 The MegaMek Team. All Rights Reserved.
  *
  * This file is part of MegaMek.
  *
@@ -51,6 +51,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -86,13 +87,16 @@ public final class MekCacheCSVTool {
     private static boolean includeGunEmplacement = false; // Variable to control inclusion of Gun Emplacement units
 
     private static final String NOT_APPLICABLE = "Not Applicable";
+    private static final Pattern ERA_TEXT_PATTERN = Pattern.compile("\\s*\\([^)]+\\)");
 
-    private static final List<String> HEADERS = List.of("Chassis", "Model", "MUL ID", "Combined", "Source",
-          "Tech Base", "File Location", "File Modified", "Weight", "Intro Date", "Experimental year", "Advanced year",
-          "Standard year", "Extinct Year", "Unit Type", "Omni", "Role", "BV", "Cost", "Rules", "Engine Name",
+    private static final List<String> HEADERS = List.of("MUL ID", "Chassis", "Model", "Source", "Combined",
+          "Tech Base", "Unit Type", "Movement Type", "Weight", "Intro Date",
+          "Prototype", "Production", "Common", "Extinct",
+          "Omni", "Role", "BV", "Cost", "Rules", "Engine Name",
           "Internal Structure", "Myomer", "Cockpit Type", "Gyro Type", "Armor Types", "Equipment", "Tech Rating",
           "Unit Quirks", "Weapon Quirks", "Manufacturer", "Factory", "Targeting", "Comms", "Armor", "JJ", "Engine",
-          "Chassis", "Capabilities", "Overview", "History", "Deployment", "Notes", "Fluff Date");
+          "Chassis_1", "Fluff Date", "Capabilities", "Overview", "History", "Deployment", "Notes",
+          "File Location", "File Modified");
 
     public static void main(String... args) {
         if (args.length > 0) {
@@ -114,39 +118,31 @@ public final class MekCacheCSVTool {
                 }
 
                 csvLine = new StringBuilder();
+                csvLine.append(unit.getMulId()).append(DELIM);
                 csvLine.append(unit.getFullChassis()).append(DELIM);
                 csvLine.append(unit.getModel()).append(DELIM);
-                csvLine.append(unit.getMulId()).append(DELIM);
-                csvLine.append(unit.getFullChassis()).append(" ").append(unit.getModel()).append(DELIM);
                 csvLine.append(unit.getSource()).append(DELIM);
+                csvLine.append(unit.getFullChassis()).append(" ").append(unit.getModel()).append(DELIM);
                 csvLine.append(unit.getTechBase()).append(DELIM);
-                csvLine.append(unit.getSourceFile()).append(DELIM);
-                csvLine.append(getFileModifiedDate(unit.getSourceFile(), unit.getEntryName())).append(DELIM);
+                csvLine.append(unit.getFullAccurateUnitType()).append(DELIM);
+                // Movement Type
+                csvLine.append(unit.getMoveMode()).append(DELIM);
                 csvLine.append(unit.getTons()).append(DELIM);
                 csvLine.append(unit.getYear()).append(DELIM);
 
-                // Experimental Tech Year
-                if (unit.getAdvancedTechYear() > unit.getYear()) {
-                    csvLine.append(unit.getYear());
-                }
-                csvLine.append(DELIM);
+                // Load entity early so availability data can be populated
+                Entity entity = loadEntity(unit.getSourceFile(), unit.getEntryName());
 
-                // Advanced Tech Year
-                if (unit.getAdvancedTechYear() > 0) {
-                    csvLine.append(unit.getAdvancedTechYear());
+                // Prototype, Production, Common, Extinct (year ranges only, era text stripped)
+                if (entity != null) {
+                    csvLine.append(stripEraText(entity.getPrototypeRangeDate())).append(DELIM);
+                    csvLine.append(stripEraText(entity.getProductionDateRange())).append(DELIM);
+                    csvLine.append(stripEraText(entity.getCommonDateRange())).append(DELIM);
+                    csvLine.append(stripEraText(entity.getExtinctionRange())).append(DELIM);
+                } else {
+                    csvLine.append(DELIM).append(DELIM).append(DELIM).append(DELIM);
                 }
-                csvLine.append(DELIM);
 
-                // Standard Tech Year
-                if (unit.getStandardTechYear() > 0) {
-                    csvLine.append(unit.getStandardTechYear());
-                }
-                csvLine.append(DELIM);
-
-                // Extinct Tech Year
-                csvLine.append(unit.getExtinctRange()).append(DELIM);
-                // Unit Type.
-                csvLine.append(unit.getFullAccurateUnitType()).append(DELIM);
                 // Omni
                 csvLine.append(unit.getOmni()).append(DELIM);
                 // Unit Role
@@ -193,11 +189,8 @@ public final class MekCacheCSVTool {
                 // Armor type - prints different armor types on the unit
                 ArrayList<Integer> armorType = new ArrayList<>();
                 ArrayList<Integer> armorTech = new ArrayList<>();
-                int[] at;
-                int[] att;
-
-                at = unit.getArmorTypes();
-                att = unit.getArmorTechTypes();
+                int[] at = unit.getArmorTypes();
+                int[] att = unit.getArmorTechTypes();
                 for (int i = 0; i < at.length; i++) {
                     boolean contains = false;
                     for (int j = 0; j < armorType.size(); j++) {
@@ -240,9 +233,10 @@ public final class MekCacheCSVTool {
                 }
                 csvLine.append(String.join(",", equipmentNames)).append(DELIM);
 
-                Entity entity = loadEntity(unit.getSourceFile(), unit.getEntryName());
                 if (entity != null) {
                     csvLine.append(entity.getFullRatingName()).append(DELIM);
+                } else {
+                    csvLine.append(DELIM);
                 }
 
                 csvLine.append(unit.getQuirkNames()).append(DELIM);
@@ -276,10 +270,13 @@ public final class MekCacheCSVTool {
                     csvLine.append(TROView.formatSystemFluff(System.CHASSIS, entity.getFluff(),
                           () -> "--")).append(DELIM);
 
+                    // Fluff Date
+                    csvLine.append(getFluffDate(unit.getSourceFile(), unit.getEntryName())).append(DELIM);
+
                     csvLine.append(entity.getFluff().getCapabilities().isBlank() ? "no" : "yes").append(DELIM);
                     csvLine.append(entity.getFluff().getOverview().isBlank() ? "no" : "yes").append(DELIM);
-                    csvLine.append(entity.getFluff().getDeployment().isBlank() ? "no" : "yes").append(DELIM);
                     csvLine.append(entity.getFluff().getHistory().isBlank() ? "no" : "yes").append(DELIM);
+                    csvLine.append(entity.getFluff().getDeployment().isBlank() ? "no" : "yes").append(DELIM);
 
                     String notes = entity.getFluff().getNotes();
                     if (!StringUtility.isNullOrBlank(notes)) {
@@ -290,7 +287,10 @@ public final class MekCacheCSVTool {
                 }
 
                 csvLine.append(DELIM);
-                csvLine.append(getFluffDate(unit.getSourceFile(), unit.getEntryName()));
+                // File Location
+                csvLine.append(unit.getSourceFile()).append(DELIM);
+                // File Modified
+                csvLine.append(getFileModifiedDate(unit.getSourceFile(), unit.getEntryName()));
 
                 csvLine.append("\n");
                 bw.write(csvLine.toString());
@@ -300,6 +300,22 @@ public final class MekCacheCSVTool {
         } catch (IOException e) {
             logger.error(e, "IO Exception");
         }
+    }
+
+    /**
+     * Strips parenthesized era text from availability range strings, leaving only the year ranges. For example,
+     * "2752-2839 (Star League to Early Succession Wars), 3041-3044 (Late Succession Wars)" becomes "2752-2839,
+     * 3041-3044".
+     *
+     * @param rangeWithEra the formatted range string that may contain era text in parentheses
+     *
+     * @return the range string with era text removed
+     */
+    private static String stripEraText(String rangeWithEra) {
+        if (rangeWithEra == null || rangeWithEra.isBlank()) {
+            return "-";
+        }
+        return ERA_TEXT_PATTERN.matcher(rangeWithEra).replaceAll("").trim();
     }
 
     public static @Nullable Entity loadEntity(File f, String entityName) {

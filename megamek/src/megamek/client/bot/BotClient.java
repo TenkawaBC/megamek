@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2000-2005 Ben Mazur (bmazur@sev.org)
- * Copyright (C) 2002-2025 The MegaMek Team. All Rights Reserved.
+ * Copyright (C) 2002-2026 The MegaMek Team. All Rights Reserved.
  *
  * This file is part of MegaMek.
  *
@@ -63,6 +63,7 @@ import megamek.common.Player;
 import megamek.common.Report;
 import megamek.common.ToHitData;
 import megamek.common.actions.EntityAction;
+import megamek.common.actions.GhostTargetAction;
 import megamek.common.actions.WeaponAttackAction;
 import megamek.common.annotations.Nullable;
 import megamek.common.board.Board;
@@ -75,6 +76,7 @@ import megamek.common.equipment.AmmoType;
 import megamek.common.equipment.AmmoType.AmmoTypeEnum;
 import megamek.common.equipment.AmmoType.Munitions;
 import megamek.common.equipment.Minefield;
+import megamek.common.equipment.MiscMounted;
 import megamek.common.equipment.MiscType;
 import megamek.common.equipment.Mounted;
 import megamek.common.equipment.WeaponMounted;
@@ -99,6 +101,7 @@ import megamek.common.units.EntityListFile;
 import megamek.common.units.EntityMovementMode;
 import megamek.common.units.IBuilding;
 import megamek.common.units.Infantry;
+import megamek.common.units.Mek;
 import megamek.common.units.ProtoMek;
 import megamek.common.units.Terrains;
 import megamek.common.units.VTOL;
@@ -317,15 +320,91 @@ public abstract class BotClient extends Client {
     }
 
     /**
-     * Calculates the pre phase turn currently does nothing other than end turn
+     * Calculates the pre phase turn. In Standard ghost target mode during PRE_FIRING,
+     * assigns ghost targets for any qualifying equipment. Otherwise just ends the turn.
      */
     protected void calculatePrePhaseTurn() {
-        sendPrePhaseData(game.getFirstEntityNum(getMyTurn()));
+        int entityId = game.getFirstEntityNum(getMyTurn());
+        Entity entity = game.getEntity(entityId);
+
+        // Assign ghost targets in Standard mode during PRE_FIRING
+        if ((entity != null) && game.getPhase().isPreFiring()
+              && game.usesStandardGhostTargetMode()) {
+            assignBotGhostTargets(entity);
+        }
+
+        sendPrePhaseData(entityId);
         sendDone(true);
+    }
+
+    /**
+     * Simple bot heuristic for ghost target assignment in Standard mode. For each ghost-target-capable equipment: jam
+     * the nearest enemy within range, or protect self if no enemies are in range.
+     */
+    private void assignBotGhostTargets(Entity source) {
+        if (source.getPosition() == null) {
+            return;
+        }
+
+        for (MiscMounted m : source.getMisc()) {
+            if (!source.isGhostTargetCapable(m)) {
+                continue;
+            }
+
+            int equipId = source.getEquipmentNum(m);
+            assignBotGhostTargetForEquipment(source, equipId);
+        }
+
+        // Mek Cockpit Command Console (cockpit type, not misc equipment)
+        if ((source instanceof Mek mek)
+              && (mek.getCockpitType() == Mek.COCKPIT_COMMAND_CONSOLE
+              || mek.getCockpitType() == Mek.COCKPIT_SUPERHEAVY_COMMAND_CONSOLE
+              || mek.getCockpitType() == Mek.COCKPIT_SMALL_COMMAND_CONSOLE)) {
+            assignBotGhostTargetForEquipment(source, GhostTargetAction.CCC_EQUIPMENT_ID);
+        }
+    }
+
+    /**
+     * Assigns a single ghost target for the given equipment on the source entity. Jams the nearest enemy within 6
+     * hexes, or protects self if none in range.
+     */
+    private void assignBotGhostTargetForEquipment(Entity source, int equipId) {
+        Entity bestTarget = null;
+        int bestDistance = Integer.MAX_VALUE;
+
+        for (Entity enemy : game.inGameTWEntities()) {
+            if (!enemy.isEnemyOf(source) || !enemy.isDeployed() || enemy.isDestroyed()
+                  || (enemy.getPosition() == null) || enemy.isConventionalInfantry()) {
+                continue;
+            }
+            int dist = source.getPosition().distance(enemy.getPosition());
+            if ((dist <= 6) && (dist < bestDistance)) {
+                bestDistance = dist;
+                bestTarget = enemy;
+            }
+        }
+
+        if (bestTarget != null) {
+            sendGhostTargetAction(source.getId(), equipId, bestTarget.getId());
+        } else {
+            sendGhostTargetAction(source.getId(), equipId, source.getId());
+        }
     }
 
     @Nullable
     protected abstract PhysicalOption calculatePhysicalTurn();
+
+    /**
+     * Calculate what to do during the PRE_END_DECLARATIONS phase. This phase allows infantry to initiate
+     * building/vessel combat.
+     */
+    protected abstract void calculatePreEndDeclarationsTurn();
+
+    /**
+     * Calculate what to do during the INFANTRY_VS_INFANTRY_COMBAT phase. This phase allows infantry to reinforce or
+     * withdraw from building/vessel combat.
+     */
+    protected abstract void calculateInfantryVsInfantryCombatTurn();
 
     protected Vector<EntityAction> calculatePointBlankShot(int firingEntityID, int targetID) {
         return new Vector<>();
@@ -671,6 +750,10 @@ public abstract class BotClient extends Client {
                 calculateTargetingOffBoardTurn();
             } else if (game.getPhase().isPremovement() || game.getPhase().isPreFiring()) {
                 calculatePrePhaseTurn();
+            } else if (game.getPhase().isPreEndDeclarations()) {
+                calculatePreEndDeclarationsTurn();
+            } else if (game.getPhase().isInfantryVsInfantryCombat()) {
+                calculateInfantryVsInfantryCombatTurn();
             }
 
             return true;

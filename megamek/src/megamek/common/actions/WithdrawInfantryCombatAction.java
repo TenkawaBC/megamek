@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2025 The MegaMek Team. All Rights Reserved.
+ * Copyright (C) 2025-2026 The MegaMek Team. All Rights Reserved.
  *
  * This file is part of MegaMek.
  *
@@ -31,43 +31,30 @@
  * affiliated with Microsoft.
  */
 
-package megamek.common.weapons.missiles.thuunderbolt;
+package megamek.common.actions;
 
-import megamek.common.alphaStrike.AlphaStrikeElement;
-import megamek.common.equipment.AmmoType;
-import megamek.common.equipment.Mounted;
+import megamek.common.game.Game;
+import megamek.common.units.Entity;
 
-public abstract class Thunderbolt20Weapon extends ThunderboltWeapon {
+/**
+ * Action to WITHDRAW from infantry vs. infantry combat (attackers only).
+ */
+public class WithdrawInfantryCombatAction extends InfantryCombatAction {
 
-    public Thunderbolt20Weapon() {
-        super();
-        ammoType = AmmoType.AmmoTypeEnum.TBOLT_20;
-        heat = 8;
-        shortAV = 20;
-        medAV = 20;
-        criticalSlots = 5;
-        missileArmor = 20;
+    /**
+     * Creates a new withdraw from infantry combat action.
+     *
+     * @param entityId the withdrawing infantry entity ID
+     * @param targetId the target entity ID
+     */
+    public WithdrawInfantryCombatAction(int entityId, int targetId) {
+        super(entityId, targetId, true);
     }
 
     @Override
-    public double getBattleForceDamage(int range, Mounted<?> fcs) {
-        if (range == AlphaStrikeElement.SHORT_RANGE) {
-            return 1.16;
-        } else if (range == AlphaStrikeElement.MEDIUM_RANGE) {
-            return 2;
-        } else if (range == AlphaStrikeElement.LONG_RANGE) {
-            return 2;
-        } else {
-            return 0;
-        }
-    }
-
-    @Override
-    public String getSortingName() {
-        String oneShotTag = hasFlag(F_ONE_SHOT) ? "OS" : "";
-        if (name.contains("I-OS")) {
-            oneShotTag = "XIOS";
-        }
-        return "Thunderbolt-" + oneShotTag + "20";
+    public String toSummaryString(Game game) {
+        Entity target = game.getEntity(getTargetId());
+        String targetName = (target != null) ? target.getDisplayName() : "Unknown";
+        return "Withdraw from " + targetName;
     }
 }

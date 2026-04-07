@@ -79,9 +79,11 @@ public class GameOptions extends BasicGameOptions {
 
         IBasicOptionGroup base = addGroup("basic");
         // Change this to false for normal release
+        addOption(base, OptionsConstants.TWRULES, true);
         addOption(base, OptionsConstants.PLAYTEST_1, false);
         addOption(base, OptionsConstants.PLAYTEST_2, false);
         addOption(base, OptionsConstants.PLAYTEST_3, false);
+        addOption(base, OptionsConstants.SEARCHLIGHTS_ON, true);
         addOption(base, OptionsConstants.BASE_PUSH_OFF_BOARD, true);
         addOption(base, OptionsConstants.BASE_DUMPING_FROM_ROUND, 1);
         addOption(base, OptionsConstants.BASE_LOBBY_AMMO_DUMP, false);
@@ -132,6 +134,8 @@ public class GameOptions extends BasicGameOptions {
         addOption(advancedRules, OptionsConstants.ADVANCED_TAC_OPS_BAP, false);
         addOption(advancedRules, OptionsConstants.ADVANCED_TAC_OPS_ECCM, false);
         addOption(advancedRules, OptionsConstants.ADVANCED_TAC_OPS_GHOST_TARGET, false);
+        addOption(advancedRules, OptionsConstants.ADVANCED_GHOST_TARGET_MODE, IOption.CHOICE,
+              OptionsConstants.GHOST_TARGET_MODE_STANDARD);
         addOption(advancedRules, OptionsConstants.ADVANCED_GHOST_TARGET_MAX, 5);
         addOption(advancedRules, OptionsConstants.ADVANCED_TAC_OPS_DIG_IN, false);
         addOption(advancedRules, OptionsConstants.ADVANCED_TAC_OPS_BA_WEIGHT, false);
@@ -159,7 +163,6 @@ public class GameOptions extends BasicGameOptions {
         addOption(advancedRules, OptionsConstants.ADVANCED_WOODS_BURN_DOWN, false);
         addOption(advancedRules, OptionsConstants.ADVANCED_WOODS_BURN_DOWN_AMOUNT, 5);
         addOption(advancedRules, OptionsConstants.ADVANCED_NO_IGNITE_CLEAR, false);
-        addOption(advancedRules, OptionsConstants.ADVANCED_ALL_HAVE_EI_COCKPIT, false);
         addOption(advancedRules, OptionsConstants.ADVANCED_TRACK_NEURAL_INTERFACE_HARDWARE, false);
         addOption(advancedRules, OptionsConstants.ADVANCED_EXTREME_TEMPERATURE_SURVIVAL, false);
         addOption(advancedRules, OptionsConstants.ADVANCED_ARMED_MEKWARRIORS, false);

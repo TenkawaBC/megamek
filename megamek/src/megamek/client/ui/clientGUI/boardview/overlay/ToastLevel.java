@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2025 The MegaMek Team. All Rights Reserved.
+ * Copyright (C) 2026 The MegaMek Team. All Rights Reserved.
  *
  * This file is part of MegaMek.
  *
@@ -30,44 +30,33 @@
  * <https://www.xbox.com/en-US/developers/rules> and it is not endorsed by or
  * affiliated with Microsoft.
  */
+package megamek.client.ui.clientGUI.boardview.overlay;
 
-package megamek.common.weapons.missiles.thuunderbolt;
+import java.awt.Color;
 
-import megamek.common.alphaStrike.AlphaStrikeElement;
-import megamek.common.equipment.AmmoType;
-import megamek.common.equipment.Mounted;
+/**
+ * Severity levels for board toast notifications. Each level defines a background color and default display duration
+ * appropriate for the urgency of the message. Callers may override the duration for specific toasts.
+ */
+public enum ToastLevel {
+    INFO(new Color(41, 98, 168), 3000),
+    SUCCESS(new Color(46, 125, 50), 3000),
+    WARNING(new Color(183, 134, 11), 4000),
+    ERROR(new Color(176, 42, 42), 5000);
 
-public abstract class Thunderbolt5Weapon extends ThunderboltWeapon {
+    private final Color backgroundColor;
+    private final int defaultDurationMs;
 
-    public Thunderbolt5Weapon() {
-        super();
-        ammoType = AmmoType.AmmoTypeEnum.TBOLT_5;
-        heat = 3;
-        shortAV = 5;
-        medAV = 5;
-        criticalSlots = 1;
-        missileArmor = 5;
+    ToastLevel(Color backgroundColor, int defaultDurationMs) {
+        this.backgroundColor = backgroundColor;
+        this.defaultDurationMs = defaultDurationMs;
     }
 
-    @Override
-    public double getBattleForceDamage(int range, Mounted<?> fcs) {
-        if (range == AlphaStrikeElement.SHORT_RANGE) {
-            return 0.29;
-        } else if (range == AlphaStrikeElement.MEDIUM_RANGE) {
-            return 0.5;
-        } else if (range == AlphaStrikeElement.LONG_RANGE) {
-            return 0.5;
-        } else {
-            return 0;
-        }
+    public Color getBackgroundColor() {
+        return backgroundColor;
     }
 
-    @Override
-    public String getSortingName() {
-        String oneShotTag = hasFlag(F_ONE_SHOT) ? "OS" : "";
-        if (name.contains("I-OS")) {
-            oneShotTag = "XIOS";
-        }
-        return "Thunderbolt-" + oneShotTag + "05";
+    public int getDefaultDurationMs() {
+        return defaultDurationMs;
     }
 }
