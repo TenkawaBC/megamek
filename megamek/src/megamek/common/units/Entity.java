@@ -5218,8 +5218,8 @@ public abstract class Entity extends TurnOrdered
      * given location. When available, use EquipmentTypeLookup internal names (or add one when it is not yet used for a
      * MiscType). Note that any internal name, even of weapons, can be given but this method only searches misc
      * equipment and will not find weapons. Note that for BA, this checks the trooper locations (squad, trooper 1...)
-     * rather than the mount locations (arm, body). For BA, {@link BattleArmor#hasMiscInMountLocation} can be
-     * used instead.
+     * rather than the mount locations (arm, body). For BA, {@link BattleArmor#hasMiscInMountLocation} can be used
+     * instead.
      *
      * @param internalName The internal name of the misc, e.g. EquipmentTypeLookup.BA_MYOMER_BOOSTER
      * @param location     The location, e.g. Mek.LOC_LEFT_TORSO
@@ -7656,12 +7656,12 @@ public abstract class Entity extends TurnOrdered
                               (weaponHandler instanceof CapitalMissileBearingsOnlyHandler) ?
                                     getGame().getTarget(
                                           weaponHandler.getWeaponAttackAction()
-                                                .getOriginalTargetType(),
+                                          .getOriginalTargetType(),
                                           weaponHandler.getWeaponAttackAction()
-                                                .getOriginalTargetId()) :
+                                          .getOriginalTargetId()) :
                                     getGame().getEntity(
                                           weaponHandler.getWeaponAttackAction()
-                                                .getEntityId())))
+                                          .getEntityId())))
                   .map(WeaponHandler::getWeaponAttackAction)
                   .collect(Collectors.toList());
 
@@ -7685,10 +7685,14 @@ public abstract class Entity extends TurnOrdered
                 final WeaponAttackAction waa = Compute.getHighestExpectedDamage(getGame(), attacksInArc, true);
                 waa.addCounterEquipment(ams);
                 targets.add(waa);
-                final WeaponAttackAction secondWaa = Compute.getSecondHighestExpectedDamage(getGame(), attacksInArc,
-                      true);
-                secondWaa.addCounterEquipment(ams);
-                targets.add(secondWaa);
+                if (attacksInArc.size() > 1) {
+                    final WeaponAttackAction secondWaa = Compute.getSecondHighestExpectedDamage(getGame(), attacksInArc,
+                          true);
+                    if (secondWaa != null) {
+                        secondWaa.addCounterEquipment(ams);
+                        targets.add(secondWaa);
+                    }
+                }
             } else {
                 // Otherwise, find the most dangerous salvo by expected damage and target it this ensures that only 1
                 // AMS targets the strike. Use for non-bays.
@@ -12083,8 +12087,8 @@ public abstract class Entity extends TurnOrdered
      * Returns the current neural interface mode from game options. Returns Off for null, blank, or unrecognized values
      * to ensure safe defaults.
      *
-     * @return the neural interface mode string, or {@link OptionsConstants#NEURAL_INTERFACE_MODE_OFF} if no game context
-     *       or invalid value
+     * @return the neural interface mode string, or {@link OptionsConstants#NEURAL_INTERFACE_MODE_OFF} if no game
+     *       context or invalid value
      */
     protected String getNeuralInterfaceMode() {
         if (game == null) {
