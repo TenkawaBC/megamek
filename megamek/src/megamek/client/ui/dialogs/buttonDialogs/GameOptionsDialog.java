@@ -37,13 +37,7 @@ import static megamek.client.ui.Messages.CLIENT_BUNDLE;
 import static megamek.client.ui.util.UIUtil.WrappingButtonPanel;
 import static megamek.common.internationalization.I18n.getTextAt;
 
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Insets;
-import java.awt.LayoutManager;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -981,6 +975,15 @@ public class GameOptionsDialog extends AbstractButtonDialog implements ActionLis
         }
         if (option.getName().equals(OptionsConstants.RULES_SYSTEM)) {
             applyRulesSystemEditability();
+            // Changing the rules system forces the change of walkOn Enablement (core true, TW false)
+            List<DialogOptionComponentYPanel> walkOnComp = optionComps.get(OptionsConstants.BASE_WALK_ON_DEPLOYMENT);
+            if (walkOnComp != null) {
+                if (OptionsConstants.RULES_TW.equals(normalizeRulesSystem(selectedRulesSystem()))) {
+                    ((DialogOptionComponentYPanel) walkOnComp).setSelected(false);
+                } else {
+                    ((DialogOptionComponentYPanel) walkOnComp).setSelected(true);
+                }
+            }
         }
     }
 

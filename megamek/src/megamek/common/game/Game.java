@@ -351,14 +351,15 @@ public final class Game extends AbstractGame implements Serializable,
         if (system.equals(OptionsConstants.RULES_TW)) {
             rulesManager = new TWRulesManager();
 
-            // Check for walk-on deployment here
-            if (getOptions().booleanOption(OptionsConstants.BASE_WALK_ON_DEPLOYMENT)) {
-                rulesManager.getRulesGame().setWalkOnDeployment(true);
-            } else {
-                rulesManager.getRulesGame().setWalkOnDeployment(false);
-            }
+
         } else if (system.equals(OptionsConstants.RULES_CORE)) {
             rulesManager = new CoreRulesManager();
+        }
+        // Check for walk-on deployment here
+        if (getOptions().booleanOption(OptionsConstants.BASE_WALK_ON_DEPLOYMENT)) {
+            rulesManager.getRulesGame().setWalkOnDeployment(true);
+        } else {
+            rulesManager.getRulesGame().setWalkOnDeployment(false);
         }
     }
 
@@ -538,11 +539,9 @@ public final class Game extends AbstractGame implements Serializable,
             } else if (!rules_system.stringValue().equals(loadedOption)) {
                 initializeRulesManager(rules_system.stringValue());
             }
-            if (loadedOption.equals(OptionsConstants.RULES_TW)) {
-                boolean shouldWalkOn = this.options.booleanOption(OptionsConstants.BASE_WALK_ON_DEPLOYMENT);
-                if (shouldWalkOn != Game.rulesManager.getRulesGame().isWalkOnDeployment()) {
-                    Game.rulesManager.getRulesGame().setWalkOnDeployment(shouldWalkOn);
-                }
+            boolean shouldWalkOn = this.options.booleanOption(OptionsConstants.BASE_WALK_ON_DEPLOYMENT);
+            if (shouldWalkOn != Game.rulesManager.getRulesGame().isWalkOnDeployment()) {
+                Game.rulesManager.getRulesGame().setWalkOnDeployment(shouldWalkOn);
             }
             processGameEvent(new GameSettingsChangeEvent(this));
         }

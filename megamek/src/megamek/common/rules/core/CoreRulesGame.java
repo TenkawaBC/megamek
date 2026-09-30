@@ -53,6 +53,9 @@ public class CoreRulesGame extends RulesGame {
 
     private static final MMLogger logger = MMLogger.create(CoreRulesGame.class);
 
+    // Default enabled for Core
+    private boolean walkOn = true;
+
     /**
      * {@inheritDoc} Ammo dumping is not in Core
      */
@@ -174,7 +177,7 @@ public class CoreRulesGame extends RulesGame {
      */
     @Override
     public boolean isWalkOnDeployment() {
-        return true;
+        return walkOn;
     }
 
     /**
@@ -189,10 +192,10 @@ public class CoreRulesGame extends RulesGame {
     }
 
     /**
-     * {@inheritDoc} This is not used by core at all.
+     * {@inheritDoc} Allows walk-on to be off for compatibility
      */
     @Override
     public void setWalkOnDeployment(final boolean walkOn) {
-        logger.debug("Setting walk on deployment should never occur when running core.");
+        this.walkOn = walkOn;
     }
 }

@@ -92,7 +92,7 @@ public class GameOptions extends BasicGameOptions {
         addOption(base, OptionsConstants.BASE_AUTO_AMS, true);
         addOption(base, OptionsConstants.BASE_RANDOM_BASEMENTS, true);
         addOption(base, OptionsConstants.BASE_BREEZE, false);
-        addOption(base, OptionsConstants.BASE_WALK_ON_DEPLOYMENT, false);
+        addOption(base, OptionsConstants.BASE_WALK_ON_DEPLOYMENT, true);
 
         IBasicOptionGroup gameMaster = addGroup("gameMaster");
         addOption(gameMaster, OptionsConstants.GAME_MASTER_ALLOW, true);
@@ -380,12 +380,27 @@ public class GameOptions extends BasicGameOptions {
 
             StringBuilder logMessages = new StringBuilder("\n");
             boolean legacyImplantsEnabled = false;
+            boolean rulesTW = false;
             for (IBasicOption bo : opts.getOptions()) {
                 if (isLegacyManeiDominiOption(bo.getName())) {
                     legacyImplantsEnabled |= Boolean.parseBoolean(String.valueOf(bo.getValue()));
                     continue;
                 }
                 changedOptions.add(parseOptionNode(bo, print, logMessages));
+                if (bo.getName().equals(OptionsConstants.RULES_SYSTEM)) {
+                    if (bo.getValue().equals(OptionsConstants.RULES_TW)) {
+                        rulesTW = true;
+                    }
+                }
+            }
+            if (!changedOptions.contains(OptionsConstants.BASE_WALK_ON_DEPLOYMENT)) {
+                IOption tempOption = getOption(OptionsConstants.BASE_WALK_ON_DEPLOYMENT);
+                if (rulesTW) {
+                    tempOption.setValue(false);
+                } else {
+                    tempOption.setValue(true);
+                }
+                changedOptions.add(tempOption);
             }
             IOption migratedNeuralInterface = migrateLegacyManeiDominiOption(legacyImplantsEnabled);
             if (migratedNeuralInterface != null) {
